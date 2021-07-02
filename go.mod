@@ -49,28 +49,6 @@ replace cloud.google.com/go/pubsub => cloud.google.com/go/pubsub v1.2.0
 
 replace cloud.google.com/go/storage => cloud.google.com/go/storage v1.6.0
 
-replace github.com/Azure/azure-sdk-for-go => github.com/Azure/azure-sdk-for-go v43.0.0+incompatible
-
-replace github.com/Azure/go-ansiterm => github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
-
-replace github.com/Azure/go-autorest => github.com/Azure/go-autorest v14.2.0+incompatible
-
-replace github.com/Azure/go-autorest/autorest => github.com/Azure/go-autorest/autorest v0.11.12
-
-replace github.com/Azure/go-autorest/autorest/adal => github.com/Azure/go-autorest/autorest/adal v0.9.5
-
-replace github.com/Azure/go-autorest/autorest/date => github.com/Azure/go-autorest/autorest/date v0.3.0
-
-replace github.com/Azure/go-autorest/autorest/mocks => github.com/Azure/go-autorest/autorest/mocks v0.4.1
-
-replace github.com/Azure/go-autorest/autorest/to => github.com/Azure/go-autorest/autorest/to v0.2.0
-
-replace github.com/Azure/go-autorest/autorest/validation => github.com/Azure/go-autorest/autorest/validation v0.1.0
-
-replace github.com/Azure/go-autorest/logger => github.com/Azure/go-autorest/logger v0.2.0
-
-replace github.com/Azure/go-autorest/tracing => github.com/Azure/go-autorest/tracing v0.6.0
-
 replace github.com/docker/distribution => github.com/docker/distribution v0.0.0-20191216044856-a8371794149d
 
 replace github.com/docker/docker => github.com/moby/moby v17.12.0-ce-rc1.0.20200618181300-9dc6525e6118+incompatible
@@ -115,7 +93,7 @@ replace google.golang.org/api => google.golang.org/api v0.20.0
 
 replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20201110150050-8816d57aaa9a
 
-replace google.golang.org/grpc => google.golang.org/grpc v1.27.1
+replace google.golang.org/grpc => google.golang.org/grpc v1.32.0
 
 replace helm.sh/helm/v3 => github.com/kubepack/helm/v3 v3.1.0-rc.1.0.20210503022716-7e2d4913a125
 
