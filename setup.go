@@ -29,6 +29,7 @@ import (
 
 	"github.com/gobuffalo/flect"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm"
+	auditlib "go.bytebuilders.dev/audit/lib"
 	arv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	informers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
@@ -116,6 +117,7 @@ import (
 	packetv1alpha1 "kubeform.dev/provider-azurerm-api/apis/packet/v1alpha1"
 	pointv1alpha1 "kubeform.dev/provider-azurerm-api/apis/point/v1alpha1"
 	policyv1alpha1 "kubeform.dev/provider-azurerm-api/apis/policy/v1alpha1"
+	portalv1alpha1 "kubeform.dev/provider-azurerm-api/apis/portal/v1alpha1"
 	postgresqlv1alpha1 "kubeform.dev/provider-azurerm-api/apis/postgresql/v1alpha1"
 	powerbiv1alpha1 "kubeform.dev/provider-azurerm-api/apis/powerbi/v1alpha1"
 	privatev1alpha1 "kubeform.dev/provider-azurerm-api/apis/private/v1alpha1"
@@ -235,6 +237,7 @@ import (
 	controllerspacket "kubeform.dev/provider-azurerm-controller/controllers/packet"
 	controllerspoint "kubeform.dev/provider-azurerm-controller/controllers/point"
 	controllerspolicy "kubeform.dev/provider-azurerm-controller/controllers/policy"
+	controllersportal "kubeform.dev/provider-azurerm-controller/controllers/portal"
 	controllerspostgresql "kubeform.dev/provider-azurerm-controller/controllers/postgresql"
 	controllerspowerbi "kubeform.dev/provider-azurerm-controller/controllers/powerbi"
 	controllersprivate "kubeform.dev/provider-azurerm-controller/controllers/private"
@@ -285,7 +288,7 @@ var runningControllers = struct {
 	mp map[schema.GroupVersionKind]bool
 }{mp: make(map[schema.GroupVersionKind]bool)}
 
-func watchCRD(crdClient *clientset.Clientset, vwcClient *admissionregistrationv1.AdmissionregistrationV1Client, stopCh <-chan struct{}, mgr manager.Manager) error {
+func watchCRD(ctx context.Context, crdClient *clientset.Clientset, vwcClient *admissionregistrationv1.AdmissionregistrationV1Client, stopCh <-chan struct{}, mgr manager.Manager, auditor *auditlib.EventPublisher, watchOnlyDefault bool) error {
 	informerFactory := informers.NewSharedInformerFactory(crdClient, time.Second*30)
 	i := informerFactory.Apiextensions().V1beta1().CustomResourceDefinitions().Informer()
 	l := informerFactory.Apiextensions().V1beta1().CustomResourceDefinitions().Lister()
@@ -351,7 +354,7 @@ func watchCRD(crdClient *clientset.Clientset, vwcClient *admissionregistrationv1
 						}
 					}
 
-					err = SetupManager(mgr, gvk)
+					err = SetupManager(ctx, mgr, gvk, auditor, watchOnlyDefault)
 					if err != nil {
 						setupLog.Error(err, "unable to start manager")
 						os.Exit(1)
@@ -398,7 +401,7 @@ func createFirstVWC(vwcClient *admissionregistrationv1.AdmissionregistrationV1Cl
 		ObjectMeta: metav1.ObjectMeta{
 			Name: strings.ReplaceAll(strings.ToLower(gvk.Group), ".", "-") + "-vwc",
 			Labels: map[string]string{
-				"app.kubernetes.io/instance": "kubeform.com/" + flect.Singularize(gvk.Kind),
+				"app.kubernetes.io/instance": "azurerm.kubeform.com",
 			},
 		},
 		Webhooks: []arv1.ValidatingWebhook{
@@ -456,7 +459,7 @@ func updateVWC(vwcClient *admissionregistrationv1.AdmissionregistrationV1Client,
 	return nil
 }
 
-func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
+func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVersionKind, auditor *auditlib.EventPublisher, watchOnlyDefault bool) error {
 	switch gvk {
 	case schema.GroupVersionKind{
 		Group:   "advanced.azurerm.kubeform.com",
@@ -464,14 +467,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ThreatProtection",
 	}:
 		if err := (&controllersadvanced.ThreatProtectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ThreatProtection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_advanced_threat_protection"],
-			TypeName: "azurerm_advanced_threat_protection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ThreatProtection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_advanced_threat_protection"],
+			TypeName:         "azurerm_advanced_threat_protection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ThreatProtection")
 			return err
 		}
@@ -481,14 +485,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServicesServer",
 	}:
 		if err := (&controllersanalysis.ServicesServerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServicesServer"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_analysis_services_server"],
-			TypeName: "azurerm_analysis_services_server",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServicesServer"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_analysis_services_server"],
+			TypeName:         "azurerm_analysis_services_server",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServicesServer")
 			return err
 		}
@@ -498,14 +503,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ApiManagement",
 	}:
 		if err := (&controllersapimanagement.ApiManagementReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ApiManagement"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management"],
-			TypeName: "azurerm_api_management",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ApiManagement"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management"],
+			TypeName:         "azurerm_api_management",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ApiManagement")
 			return err
 		}
@@ -515,14 +521,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Api",
 	}:
 		if err := (&controllersapimanagement.ApiReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Api"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_api"],
-			TypeName: "azurerm_api_management_api",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Api"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_api"],
+			TypeName:         "azurerm_api_management_api",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Api")
 			return err
 		}
@@ -532,14 +539,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ApiDiagnostic",
 	}:
 		if err := (&controllersapimanagement.ApiDiagnosticReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ApiDiagnostic"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_api_diagnostic"],
-			TypeName: "azurerm_api_management_api_diagnostic",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ApiDiagnostic"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_api_diagnostic"],
+			TypeName:         "azurerm_api_management_api_diagnostic",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ApiDiagnostic")
 			return err
 		}
@@ -549,14 +557,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ApiOperation",
 	}:
 		if err := (&controllersapimanagement.ApiOperationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ApiOperation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_api_operation"],
-			TypeName: "azurerm_api_management_api_operation",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ApiOperation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_api_operation"],
+			TypeName:         "azurerm_api_management_api_operation",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ApiOperation")
 			return err
 		}
@@ -566,15 +575,34 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ApiOperationPolicy",
 	}:
 		if err := (&controllersapimanagement.ApiOperationPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ApiOperationPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_api_operation_policy"],
-			TypeName: "azurerm_api_management_api_operation_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ApiOperationPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_api_operation_policy"],
+			TypeName:         "azurerm_api_management_api_operation_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ApiOperationPolicy")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ApiOperationTag",
+	}:
+		if err := (&controllersapimanagement.ApiOperationTagReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ApiOperationTag"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_api_operation_tag"],
+			TypeName:         "azurerm_api_management_api_operation_tag",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ApiOperationTag")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -583,14 +611,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ApiPolicy",
 	}:
 		if err := (&controllersapimanagement.ApiPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ApiPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_api_policy"],
-			TypeName: "azurerm_api_management_api_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ApiPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_api_policy"],
+			TypeName:         "azurerm_api_management_api_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ApiPolicy")
 			return err
 		}
@@ -600,14 +629,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ApiSchema",
 	}:
 		if err := (&controllersapimanagement.ApiSchemaReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ApiSchema"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_api_schema"],
-			TypeName: "azurerm_api_management_api_schema",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ApiSchema"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_api_schema"],
+			TypeName:         "azurerm_api_management_api_schema",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ApiSchema")
 			return err
 		}
@@ -617,14 +647,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ApiVersionSet",
 	}:
 		if err := (&controllersapimanagement.ApiVersionSetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ApiVersionSet"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_api_version_set"],
-			TypeName: "azurerm_api_management_api_version_set",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ApiVersionSet"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_api_version_set"],
+			TypeName:         "azurerm_api_management_api_version_set",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ApiVersionSet")
 			return err
 		}
@@ -634,14 +665,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AuthorizationServer",
 	}:
 		if err := (&controllersapimanagement.AuthorizationServerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AuthorizationServer"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_authorization_server"],
-			TypeName: "azurerm_api_management_authorization_server",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AuthorizationServer"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_authorization_server"],
+			TypeName:         "azurerm_api_management_authorization_server",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AuthorizationServer")
 			return err
 		}
@@ -651,14 +683,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Backend",
 	}:
 		if err := (&controllersapimanagement.BackendReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Backend"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_backend"],
-			TypeName: "azurerm_api_management_backend",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Backend"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_backend"],
+			TypeName:         "azurerm_api_management_backend",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Backend")
 			return err
 		}
@@ -668,14 +701,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Certificate",
 	}:
 		if err := (&controllersapimanagement.CertificateReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Certificate"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_certificate"],
-			TypeName: "azurerm_api_management_certificate",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Certificate"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_certificate"],
+			TypeName:         "azurerm_api_management_certificate",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Certificate")
 			return err
 		}
@@ -685,14 +719,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CustomDomain",
 	}:
 		if err := (&controllersapimanagement.CustomDomainReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CustomDomain"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_custom_domain"],
-			TypeName: "azurerm_api_management_custom_domain",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CustomDomain"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_custom_domain"],
+			TypeName:         "azurerm_api_management_custom_domain",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CustomDomain")
 			return err
 		}
@@ -702,14 +737,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Diagnostic",
 	}:
 		if err := (&controllersapimanagement.DiagnosticReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Diagnostic"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_diagnostic"],
-			TypeName: "azurerm_api_management_diagnostic",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Diagnostic"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_diagnostic"],
+			TypeName:         "azurerm_api_management_diagnostic",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Diagnostic")
 			return err
 		}
@@ -719,14 +755,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EmailTemplate",
 	}:
 		if err := (&controllersapimanagement.EmailTemplateReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EmailTemplate"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_email_template"],
-			TypeName: "azurerm_api_management_email_template",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EmailTemplate"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_email_template"],
+			TypeName:         "azurerm_api_management_email_template",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EmailTemplate")
 			return err
 		}
@@ -736,14 +773,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Group",
 	}:
 		if err := (&controllersapimanagement.GroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Group"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_group"],
-			TypeName: "azurerm_api_management_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Group"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_group"],
+			TypeName:         "azurerm_api_management_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Group")
 			return err
 		}
@@ -753,14 +791,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "GroupUser",
 	}:
 		if err := (&controllersapimanagement.GroupUserReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("GroupUser"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_group_user"],
-			TypeName: "azurerm_api_management_group_user",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GroupUser"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_group_user"],
+			TypeName:         "azurerm_api_management_group_user",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "GroupUser")
 			return err
 		}
@@ -770,14 +809,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "IdentityProviderAad",
 	}:
 		if err := (&controllersapimanagement.IdentityProviderAadReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("IdentityProviderAad"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_aad"],
-			TypeName: "azurerm_api_management_identity_provider_aad",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("IdentityProviderAad"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_aad"],
+			TypeName:         "azurerm_api_management_identity_provider_aad",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "IdentityProviderAad")
 			return err
 		}
@@ -787,14 +827,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "IdentityProviderAadb2c",
 	}:
 		if err := (&controllersapimanagement.IdentityProviderAadb2cReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("IdentityProviderAadb2c"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_aadb2c"],
-			TypeName: "azurerm_api_management_identity_provider_aadb2c",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("IdentityProviderAadb2c"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_aadb2c"],
+			TypeName:         "azurerm_api_management_identity_provider_aadb2c",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "IdentityProviderAadb2c")
 			return err
 		}
@@ -804,14 +845,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "IdentityProviderFacebook",
 	}:
 		if err := (&controllersapimanagement.IdentityProviderFacebookReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("IdentityProviderFacebook"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_facebook"],
-			TypeName: "azurerm_api_management_identity_provider_facebook",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("IdentityProviderFacebook"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_facebook"],
+			TypeName:         "azurerm_api_management_identity_provider_facebook",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "IdentityProviderFacebook")
 			return err
 		}
@@ -821,14 +863,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "IdentityProviderGoogle",
 	}:
 		if err := (&controllersapimanagement.IdentityProviderGoogleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("IdentityProviderGoogle"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_google"],
-			TypeName: "azurerm_api_management_identity_provider_google",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("IdentityProviderGoogle"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_google"],
+			TypeName:         "azurerm_api_management_identity_provider_google",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "IdentityProviderGoogle")
 			return err
 		}
@@ -838,14 +881,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "IdentityProviderMicrosoft",
 	}:
 		if err := (&controllersapimanagement.IdentityProviderMicrosoftReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("IdentityProviderMicrosoft"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_microsoft"],
-			TypeName: "azurerm_api_management_identity_provider_microsoft",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("IdentityProviderMicrosoft"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_microsoft"],
+			TypeName:         "azurerm_api_management_identity_provider_microsoft",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "IdentityProviderMicrosoft")
 			return err
 		}
@@ -855,14 +899,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "IdentityProviderTwitter",
 	}:
 		if err := (&controllersapimanagement.IdentityProviderTwitterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("IdentityProviderTwitter"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_twitter"],
-			TypeName: "azurerm_api_management_identity_provider_twitter",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("IdentityProviderTwitter"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_identity_provider_twitter"],
+			TypeName:         "azurerm_api_management_identity_provider_twitter",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "IdentityProviderTwitter")
 			return err
 		}
@@ -872,14 +917,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Logger",
 	}:
 		if err := (&controllersapimanagement.LoggerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Logger"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_logger"],
-			TypeName: "azurerm_api_management_logger",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Logger"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_logger"],
+			TypeName:         "azurerm_api_management_logger",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Logger")
 			return err
 		}
@@ -889,14 +935,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NamedValue",
 	}:
 		if err := (&controllersapimanagement.NamedValueReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NamedValue"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_named_value"],
-			TypeName: "azurerm_api_management_named_value",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NamedValue"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_named_value"],
+			TypeName:         "azurerm_api_management_named_value",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NamedValue")
 			return err
 		}
@@ -906,14 +953,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "OpenidConnectProvider",
 	}:
 		if err := (&controllersapimanagement.OpenidConnectProviderReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("OpenidConnectProvider"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_openid_connect_provider"],
-			TypeName: "azurerm_api_management_openid_connect_provider",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("OpenidConnectProvider"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_openid_connect_provider"],
+			TypeName:         "azurerm_api_management_openid_connect_provider",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "OpenidConnectProvider")
 			return err
 		}
@@ -923,14 +971,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Policy",
 	}:
 		if err := (&controllersapimanagement.PolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Policy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_policy"],
-			TypeName: "azurerm_api_management_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Policy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_policy"],
+			TypeName:         "azurerm_api_management_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Policy")
 			return err
 		}
@@ -940,14 +989,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Product",
 	}:
 		if err := (&controllersapimanagement.ProductReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Product"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_product"],
-			TypeName: "azurerm_api_management_product",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Product"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_product"],
+			TypeName:         "azurerm_api_management_product",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Product")
 			return err
 		}
@@ -957,14 +1007,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ProductAPI",
 	}:
 		if err := (&controllersapimanagement.ProductAPIReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ProductAPI"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_product_api"],
-			TypeName: "azurerm_api_management_product_api",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ProductAPI"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_product_api"],
+			TypeName:         "azurerm_api_management_product_api",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProductAPI")
 			return err
 		}
@@ -974,14 +1025,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ProductGroup",
 	}:
 		if err := (&controllersapimanagement.ProductGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ProductGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_product_group"],
-			TypeName: "azurerm_api_management_product_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ProductGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_product_group"],
+			TypeName:         "azurerm_api_management_product_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProductGroup")
 			return err
 		}
@@ -991,14 +1043,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ProductPolicy",
 	}:
 		if err := (&controllersapimanagement.ProductPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ProductPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_product_policy"],
-			TypeName: "azurerm_api_management_product_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ProductPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_product_policy"],
+			TypeName:         "azurerm_api_management_product_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProductPolicy")
 			return err
 		}
@@ -1008,14 +1061,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Property",
 	}:
 		if err := (&controllersapimanagement.PropertyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Property"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_property"],
-			TypeName: "azurerm_api_management_property",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Property"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_property"],
+			TypeName:         "azurerm_api_management_property",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Property")
 			return err
 		}
@@ -1025,14 +1079,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "RedisCache",
 	}:
 		if err := (&controllersapimanagement.RedisCacheReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("RedisCache"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_redis_cache"],
-			TypeName: "azurerm_api_management_redis_cache",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("RedisCache"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_redis_cache"],
+			TypeName:         "azurerm_api_management_redis_cache",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "RedisCache")
 			return err
 		}
@@ -1042,14 +1097,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Subscription",
 	}:
 		if err := (&controllersapimanagement.SubscriptionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Subscription"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_subscription"],
-			TypeName: "azurerm_api_management_subscription",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Subscription"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_subscription"],
+			TypeName:         "azurerm_api_management_subscription",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Subscription")
 			return err
 		}
@@ -1059,14 +1115,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "User",
 	}:
 		if err := (&controllersapimanagement.UserReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("User"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_api_management_user"],
-			TypeName: "azurerm_api_management_user",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("User"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_api_management_user"],
+			TypeName:         "azurerm_api_management_user",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "User")
 			return err
 		}
@@ -1076,14 +1133,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Configuration",
 	}:
 		if err := (&controllersapp.ConfigurationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Configuration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_configuration"],
-			TypeName: "azurerm_app_configuration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Configuration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_configuration"],
+			TypeName:         "azurerm_app_configuration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Configuration")
 			return err
 		}
@@ -1093,14 +1151,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Service",
 	}:
 		if err := (&controllersapp.ServiceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Service"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service"],
-			TypeName: "azurerm_app_service",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Service"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service"],
+			TypeName:         "azurerm_app_service",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Service")
 			return err
 		}
@@ -1110,14 +1169,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceActiveSlot",
 	}:
 		if err := (&controllersapp.ServiceActiveSlotReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceActiveSlot"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_active_slot"],
-			TypeName: "azurerm_app_service_active_slot",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceActiveSlot"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_active_slot"],
+			TypeName:         "azurerm_app_service_active_slot",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceActiveSlot")
 			return err
 		}
@@ -1127,14 +1187,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceCertificate",
 	}:
 		if err := (&controllersapp.ServiceCertificateReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceCertificate"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_certificate"],
-			TypeName: "azurerm_app_service_certificate",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceCertificate"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_certificate"],
+			TypeName:         "azurerm_app_service_certificate",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceCertificate")
 			return err
 		}
@@ -1144,14 +1205,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceCertificateBinding",
 	}:
 		if err := (&controllersapp.ServiceCertificateBindingReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceCertificateBinding"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_certificate_binding"],
-			TypeName: "azurerm_app_service_certificate_binding",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceCertificateBinding"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_certificate_binding"],
+			TypeName:         "azurerm_app_service_certificate_binding",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceCertificateBinding")
 			return err
 		}
@@ -1161,14 +1223,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceCertificateOrder",
 	}:
 		if err := (&controllersapp.ServiceCertificateOrderReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceCertificateOrder"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_certificate_order"],
-			TypeName: "azurerm_app_service_certificate_order",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceCertificateOrder"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_certificate_order"],
+			TypeName:         "azurerm_app_service_certificate_order",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceCertificateOrder")
 			return err
 		}
@@ -1178,14 +1241,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceCustomHostnameBinding",
 	}:
 		if err := (&controllersapp.ServiceCustomHostnameBindingReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceCustomHostnameBinding"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_custom_hostname_binding"],
-			TypeName: "azurerm_app_service_custom_hostname_binding",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceCustomHostnameBinding"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_custom_hostname_binding"],
+			TypeName:         "azurerm_app_service_custom_hostname_binding",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceCustomHostnameBinding")
 			return err
 		}
@@ -1195,14 +1259,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceEnvironment",
 	}:
 		if err := (&controllersapp.ServiceEnvironmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceEnvironment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_environment"],
-			TypeName: "azurerm_app_service_environment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceEnvironment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_environment"],
+			TypeName:         "azurerm_app_service_environment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceEnvironment")
 			return err
 		}
@@ -1212,14 +1277,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceEnvironmentV3",
 	}:
 		if err := (&controllersapp.ServiceEnvironmentV3Reconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceEnvironmentV3"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_environment_v3"],
-			TypeName: "azurerm_app_service_environment_v3",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceEnvironmentV3"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_environment_v3"],
+			TypeName:         "azurerm_app_service_environment_v3",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceEnvironmentV3")
 			return err
 		}
@@ -1229,14 +1295,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceHybridConnection",
 	}:
 		if err := (&controllersapp.ServiceHybridConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceHybridConnection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_hybrid_connection"],
-			TypeName: "azurerm_app_service_hybrid_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceHybridConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_hybrid_connection"],
+			TypeName:         "azurerm_app_service_hybrid_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceHybridConnection")
 			return err
 		}
@@ -1246,14 +1313,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceManagedCertificate",
 	}:
 		if err := (&controllersapp.ServiceManagedCertificateReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceManagedCertificate"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_managed_certificate"],
-			TypeName: "azurerm_app_service_managed_certificate",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceManagedCertificate"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_managed_certificate"],
+			TypeName:         "azurerm_app_service_managed_certificate",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceManagedCertificate")
 			return err
 		}
@@ -1263,14 +1331,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServicePlan",
 	}:
 		if err := (&controllersapp.ServicePlanReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServicePlan"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_plan"],
-			TypeName: "azurerm_app_service_plan",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServicePlan"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_plan"],
+			TypeName:         "azurerm_app_service_plan",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServicePlan")
 			return err
 		}
@@ -1280,14 +1349,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceSlot",
 	}:
 		if err := (&controllersapp.ServiceSlotReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceSlot"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_slot"],
-			TypeName: "azurerm_app_service_slot",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceSlot"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_slot"],
+			TypeName:         "azurerm_app_service_slot",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceSlot")
 			return err
 		}
@@ -1297,14 +1367,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceSlotVirtualNetworkSwiftConnection",
 	}:
 		if err := (&controllersapp.ServiceSlotVirtualNetworkSwiftConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceSlotVirtualNetworkSwiftConnection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_slot_virtual_network_swift_connection"],
-			TypeName: "azurerm_app_service_slot_virtual_network_swift_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceSlotVirtualNetworkSwiftConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_slot_virtual_network_swift_connection"],
+			TypeName:         "azurerm_app_service_slot_virtual_network_swift_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceSlotVirtualNetworkSwiftConnection")
 			return err
 		}
@@ -1314,14 +1385,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceSourceControlToken",
 	}:
 		if err := (&controllersapp.ServiceSourceControlTokenReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceSourceControlToken"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_source_control_token"],
-			TypeName: "azurerm_app_service_source_control_token",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceSourceControlToken"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_source_control_token"],
+			TypeName:         "azurerm_app_service_source_control_token",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceSourceControlToken")
 			return err
 		}
@@ -1331,14 +1403,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceVirtualNetworkSwiftConnection",
 	}:
 		if err := (&controllersapp.ServiceVirtualNetworkSwiftConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceVirtualNetworkSwiftConnection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_app_service_virtual_network_swift_connection"],
-			TypeName: "azurerm_app_service_virtual_network_swift_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceVirtualNetworkSwiftConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_app_service_virtual_network_swift_connection"],
+			TypeName:         "azurerm_app_service_virtual_network_swift_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceVirtualNetworkSwiftConnection")
 			return err
 		}
@@ -1348,14 +1421,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Gateway",
 	}:
 		if err := (&controllersapplication.GatewayReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Gateway"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_application_gateway"],
-			TypeName: "azurerm_application_gateway",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Gateway"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_application_gateway"],
+			TypeName:         "azurerm_application_gateway",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Gateway")
 			return err
 		}
@@ -1365,14 +1439,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Insights",
 	}:
 		if err := (&controllersapplication.InsightsReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Insights"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_application_insights"],
-			TypeName: "azurerm_application_insights",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Insights"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_application_insights"],
+			TypeName:         "azurerm_application_insights",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Insights")
 			return err
 		}
@@ -1382,14 +1457,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "InsightsAnalyticsItem",
 	}:
 		if err := (&controllersapplication.InsightsAnalyticsItemReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("InsightsAnalyticsItem"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_application_insights_analytics_item"],
-			TypeName: "azurerm_application_insights_analytics_item",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("InsightsAnalyticsItem"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_application_insights_analytics_item"],
+			TypeName:         "azurerm_application_insights_analytics_item",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "InsightsAnalyticsItem")
 			return err
 		}
@@ -1399,14 +1475,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "InsightsAPIKey",
 	}:
 		if err := (&controllersapplication.InsightsAPIKeyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("InsightsAPIKey"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_application_insights_api_key"],
-			TypeName: "azurerm_application_insights_api_key",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("InsightsAPIKey"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_application_insights_api_key"],
+			TypeName:         "azurerm_application_insights_api_key",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "InsightsAPIKey")
 			return err
 		}
@@ -1416,14 +1493,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "InsightsSmartDetectionRule",
 	}:
 		if err := (&controllersapplication.InsightsSmartDetectionRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("InsightsSmartDetectionRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_application_insights_smart_detection_rule"],
-			TypeName: "azurerm_application_insights_smart_detection_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("InsightsSmartDetectionRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_application_insights_smart_detection_rule"],
+			TypeName:         "azurerm_application_insights_smart_detection_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "InsightsSmartDetectionRule")
 			return err
 		}
@@ -1433,14 +1511,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "InsightsWebTest",
 	}:
 		if err := (&controllersapplication.InsightsWebTestReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("InsightsWebTest"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_application_insights_web_test"],
-			TypeName: "azurerm_application_insights_web_test",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("InsightsWebTest"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_application_insights_web_test"],
+			TypeName:         "azurerm_application_insights_web_test",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "InsightsWebTest")
 			return err
 		}
@@ -1450,14 +1529,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SecurityGroup",
 	}:
 		if err := (&controllersapplication.SecurityGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SecurityGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_application_security_group"],
-			TypeName: "azurerm_application_security_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SecurityGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_application_security_group"],
+			TypeName:         "azurerm_application_security_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SecurityGroup")
 			return err
 		}
@@ -1467,14 +1547,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Provider",
 	}:
 		if err := (&controllersattestation.ProviderReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Provider"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_attestation_provider"],
-			TypeName: "azurerm_attestation_provider",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Provider"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_attestation_provider"],
+			TypeName:         "azurerm_attestation_provider",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Provider")
 			return err
 		}
@@ -1484,14 +1565,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Account",
 	}:
 		if err := (&controllersautomation.AccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Account"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_account"],
-			TypeName: "azurerm_automation_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Account"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_account"],
+			TypeName:         "azurerm_automation_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Account")
 			return err
 		}
@@ -1501,14 +1583,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Certificate",
 	}:
 		if err := (&controllersautomation.CertificateReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Certificate"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_certificate"],
-			TypeName: "azurerm_automation_certificate",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Certificate"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_certificate"],
+			TypeName:         "azurerm_automation_certificate",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Certificate")
 			return err
 		}
@@ -1518,14 +1601,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Connection",
 	}:
 		if err := (&controllersautomation.ConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Connection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_connection"],
-			TypeName: "azurerm_automation_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Connection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_connection"],
+			TypeName:         "azurerm_automation_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Connection")
 			return err
 		}
@@ -1535,14 +1619,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ConnectionCertificate",
 	}:
 		if err := (&controllersautomation.ConnectionCertificateReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ConnectionCertificate"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_connection_certificate"],
-			TypeName: "azurerm_automation_connection_certificate",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ConnectionCertificate"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_connection_certificate"],
+			TypeName:         "azurerm_automation_connection_certificate",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ConnectionCertificate")
 			return err
 		}
@@ -1552,14 +1637,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ConnectionClassicCertificate",
 	}:
 		if err := (&controllersautomation.ConnectionClassicCertificateReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ConnectionClassicCertificate"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_connection_classic_certificate"],
-			TypeName: "azurerm_automation_connection_classic_certificate",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ConnectionClassicCertificate"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_connection_classic_certificate"],
+			TypeName:         "azurerm_automation_connection_classic_certificate",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ConnectionClassicCertificate")
 			return err
 		}
@@ -1569,14 +1655,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ConnectionServicePrincipal",
 	}:
 		if err := (&controllersautomation.ConnectionServicePrincipalReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ConnectionServicePrincipal"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_connection_service_principal"],
-			TypeName: "azurerm_automation_connection_service_principal",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ConnectionServicePrincipal"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_connection_service_principal"],
+			TypeName:         "azurerm_automation_connection_service_principal",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ConnectionServicePrincipal")
 			return err
 		}
@@ -1586,14 +1673,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Credential",
 	}:
 		if err := (&controllersautomation.CredentialReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Credential"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_credential"],
-			TypeName: "azurerm_automation_credential",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Credential"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_credential"],
+			TypeName:         "azurerm_automation_credential",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Credential")
 			return err
 		}
@@ -1603,14 +1691,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DscConfiguration",
 	}:
 		if err := (&controllersautomation.DscConfigurationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DscConfiguration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_dsc_configuration"],
-			TypeName: "azurerm_automation_dsc_configuration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DscConfiguration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_dsc_configuration"],
+			TypeName:         "azurerm_automation_dsc_configuration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DscConfiguration")
 			return err
 		}
@@ -1620,14 +1709,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DscNodeconfiguration",
 	}:
 		if err := (&controllersautomation.DscNodeconfigurationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DscNodeconfiguration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_dsc_nodeconfiguration"],
-			TypeName: "azurerm_automation_dsc_nodeconfiguration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DscNodeconfiguration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_dsc_nodeconfiguration"],
+			TypeName:         "azurerm_automation_dsc_nodeconfiguration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DscNodeconfiguration")
 			return err
 		}
@@ -1637,14 +1727,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "JobSchedule",
 	}:
 		if err := (&controllersautomation.JobScheduleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("JobSchedule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_job_schedule"],
-			TypeName: "azurerm_automation_job_schedule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("JobSchedule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_job_schedule"],
+			TypeName:         "azurerm_automation_job_schedule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "JobSchedule")
 			return err
 		}
@@ -1654,14 +1745,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Module",
 	}:
 		if err := (&controllersautomation.ModuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Module"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_module"],
-			TypeName: "azurerm_automation_module",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Module"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_module"],
+			TypeName:         "azurerm_automation_module",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Module")
 			return err
 		}
@@ -1671,14 +1763,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Runbook",
 	}:
 		if err := (&controllersautomation.RunbookReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Runbook"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_runbook"],
-			TypeName: "azurerm_automation_runbook",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Runbook"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_runbook"],
+			TypeName:         "azurerm_automation_runbook",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Runbook")
 			return err
 		}
@@ -1688,14 +1781,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Schedule",
 	}:
 		if err := (&controllersautomation.ScheduleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Schedule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_schedule"],
-			TypeName: "azurerm_automation_schedule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Schedule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_schedule"],
+			TypeName:         "azurerm_automation_schedule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Schedule")
 			return err
 		}
@@ -1705,14 +1799,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VariableBool",
 	}:
 		if err := (&controllersautomation.VariableBoolReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VariableBool"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_variable_bool"],
-			TypeName: "azurerm_automation_variable_bool",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VariableBool"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_variable_bool"],
+			TypeName:         "azurerm_automation_variable_bool",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VariableBool")
 			return err
 		}
@@ -1722,14 +1817,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VariableDatetime",
 	}:
 		if err := (&controllersautomation.VariableDatetimeReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VariableDatetime"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_variable_datetime"],
-			TypeName: "azurerm_automation_variable_datetime",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VariableDatetime"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_variable_datetime"],
+			TypeName:         "azurerm_automation_variable_datetime",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VariableDatetime")
 			return err
 		}
@@ -1739,14 +1835,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VariableInt",
 	}:
 		if err := (&controllersautomation.VariableIntReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VariableInt"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_variable_int"],
-			TypeName: "azurerm_automation_variable_int",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VariableInt"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_variable_int"],
+			TypeName:         "azurerm_automation_variable_int",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VariableInt")
 			return err
 		}
@@ -1756,14 +1853,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VariableString",
 	}:
 		if err := (&controllersautomation.VariableStringReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VariableString"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_automation_variable_string"],
-			TypeName: "azurerm_automation_variable_string",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VariableString"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_automation_variable_string"],
+			TypeName:         "azurerm_automation_variable_string",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VariableString")
 			return err
 		}
@@ -1773,14 +1871,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Set",
 	}:
 		if err := (&controllersavailability.SetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Set"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_availability_set"],
-			TypeName: "azurerm_availability_set",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Set"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_availability_set"],
+			TypeName:         "azurerm_availability_set",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Set")
 			return err
 		}
@@ -1790,14 +1889,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ContainerStorageAccount",
 	}:
 		if err := (&controllersbackup.ContainerStorageAccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ContainerStorageAccount"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_backup_container_storage_account"],
-			TypeName: "azurerm_backup_container_storage_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ContainerStorageAccount"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_backup_container_storage_account"],
+			TypeName:         "azurerm_backup_container_storage_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ContainerStorageAccount")
 			return err
 		}
@@ -1807,14 +1907,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "PolicyFileShare",
 	}:
 		if err := (&controllersbackup.PolicyFileShareReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("PolicyFileShare"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_backup_policy_file_share"],
-			TypeName: "azurerm_backup_policy_file_share",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("PolicyFileShare"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_backup_policy_file_share"],
+			TypeName:         "azurerm_backup_policy_file_share",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "PolicyFileShare")
 			return err
 		}
@@ -1824,14 +1925,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "PolicyVm",
 	}:
 		if err := (&controllersbackup.PolicyVmReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("PolicyVm"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_backup_policy_vm"],
-			TypeName: "azurerm_backup_policy_vm",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("PolicyVm"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_backup_policy_vm"],
+			TypeName:         "azurerm_backup_policy_vm",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "PolicyVm")
 			return err
 		}
@@ -1841,14 +1943,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ProtectedFileShare",
 	}:
 		if err := (&controllersbackup.ProtectedFileShareReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ProtectedFileShare"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_backup_protected_file_share"],
-			TypeName: "azurerm_backup_protected_file_share",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ProtectedFileShare"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_backup_protected_file_share"],
+			TypeName:         "azurerm_backup_protected_file_share",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProtectedFileShare")
 			return err
 		}
@@ -1858,14 +1961,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ProtectedVm",
 	}:
 		if err := (&controllersbackup.ProtectedVmReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ProtectedVm"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_backup_protected_vm"],
-			TypeName: "azurerm_backup_protected_vm",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ProtectedVm"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_backup_protected_vm"],
+			TypeName:         "azurerm_backup_protected_vm",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProtectedVm")
 			return err
 		}
@@ -1875,14 +1979,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Host",
 	}:
 		if err := (&controllersbastion.HostReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Host"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_bastion_host"],
-			TypeName: "azurerm_bastion_host",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Host"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_bastion_host"],
+			TypeName:         "azurerm_bastion_host",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Host")
 			return err
 		}
@@ -1892,14 +1997,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Account",
 	}:
 		if err := (&controllersbatch.AccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Account"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_batch_account"],
-			TypeName: "azurerm_batch_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Account"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_batch_account"],
+			TypeName:         "azurerm_batch_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Account")
 			return err
 		}
@@ -1909,14 +2015,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Application",
 	}:
 		if err := (&controllersbatch.ApplicationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Application"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_batch_application"],
-			TypeName: "azurerm_batch_application",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Application"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_batch_application"],
+			TypeName:         "azurerm_batch_application",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Application")
 			return err
 		}
@@ -1926,14 +2033,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Certificate",
 	}:
 		if err := (&controllersbatch.CertificateReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Certificate"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_batch_certificate"],
-			TypeName: "azurerm_batch_certificate",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Certificate"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_batch_certificate"],
+			TypeName:         "azurerm_batch_certificate",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Certificate")
 			return err
 		}
@@ -1943,14 +2051,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Pool",
 	}:
 		if err := (&controllersbatch.PoolReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Pool"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_batch_pool"],
-			TypeName: "azurerm_batch_pool",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Pool"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_batch_pool"],
+			TypeName:         "azurerm_batch_pool",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Pool")
 			return err
 		}
@@ -1960,14 +2069,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Assignment",
 	}:
 		if err := (&controllersblueprint.AssignmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Assignment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_blueprint_assignment"],
-			TypeName: "azurerm_blueprint_assignment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Assignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_blueprint_assignment"],
+			TypeName:         "azurerm_blueprint_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Assignment")
 			return err
 		}
@@ -1977,14 +2087,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ChannelDirectline",
 	}:
 		if err := (&controllersbot.ChannelDirectlineReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ChannelDirectline"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_bot_channel_directline"],
-			TypeName: "azurerm_bot_channel_directline",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ChannelDirectline"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_bot_channel_directline"],
+			TypeName:         "azurerm_bot_channel_directline",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ChannelDirectline")
 			return err
 		}
@@ -1994,14 +2105,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ChannelEmail",
 	}:
 		if err := (&controllersbot.ChannelEmailReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ChannelEmail"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_bot_channel_email"],
-			TypeName: "azurerm_bot_channel_email",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ChannelEmail"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_bot_channel_email"],
+			TypeName:         "azurerm_bot_channel_email",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ChannelEmail")
 			return err
 		}
@@ -2011,14 +2123,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ChannelMsTeams",
 	}:
 		if err := (&controllersbot.ChannelMsTeamsReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ChannelMsTeams"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_bot_channel_ms_teams"],
-			TypeName: "azurerm_bot_channel_ms_teams",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ChannelMsTeams"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_bot_channel_ms_teams"],
+			TypeName:         "azurerm_bot_channel_ms_teams",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ChannelMsTeams")
 			return err
 		}
@@ -2028,14 +2141,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ChannelSlack",
 	}:
 		if err := (&controllersbot.ChannelSlackReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ChannelSlack"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_bot_channel_slack"],
-			TypeName: "azurerm_bot_channel_slack",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ChannelSlack"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_bot_channel_slack"],
+			TypeName:         "azurerm_bot_channel_slack",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ChannelSlack")
 			return err
 		}
@@ -2045,14 +2159,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ChannelsRegistration",
 	}:
 		if err := (&controllersbot.ChannelsRegistrationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ChannelsRegistration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_bot_channels_registration"],
-			TypeName: "azurerm_bot_channels_registration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ChannelsRegistration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_bot_channels_registration"],
+			TypeName:         "azurerm_bot_channels_registration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ChannelsRegistration")
 			return err
 		}
@@ -2062,14 +2177,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Connection",
 	}:
 		if err := (&controllersbot.ConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Connection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_bot_connection"],
-			TypeName: "azurerm_bot_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Connection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_bot_connection"],
+			TypeName:         "azurerm_bot_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Connection")
 			return err
 		}
@@ -2079,14 +2195,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "WebApp",
 	}:
 		if err := (&controllersbot.WebAppReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("WebApp"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_bot_web_app"],
-			TypeName: "azurerm_bot_web_app",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("WebApp"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_bot_web_app"],
+			TypeName:         "azurerm_bot_web_app",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "WebApp")
 			return err
 		}
@@ -2096,14 +2213,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Endpoint",
 	}:
 		if err := (&controllerscdn.EndpointReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Endpoint"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cdn_endpoint"],
-			TypeName: "azurerm_cdn_endpoint",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Endpoint"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cdn_endpoint"],
+			TypeName:         "azurerm_cdn_endpoint",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Endpoint")
 			return err
 		}
@@ -2113,14 +2231,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Profile",
 	}:
 		if err := (&controllerscdn.ProfileReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Profile"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cdn_profile"],
-			TypeName: "azurerm_cdn_profile",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Profile"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cdn_profile"],
+			TypeName:         "azurerm_cdn_profile",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Profile")
 			return err
 		}
@@ -2130,14 +2249,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Account",
 	}:
 		if err := (&controllerscognitive.AccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Account"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cognitive_account"],
-			TypeName: "azurerm_cognitive_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Account"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cognitive_account"],
+			TypeName:         "azurerm_cognitive_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Account")
 			return err
 		}
@@ -2147,14 +2267,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Service",
 	}:
 		if err := (&controllerscommunication.ServiceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Service"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_communication_service"],
-			TypeName: "azurerm_communication_service",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Service"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_communication_service"],
+			TypeName:         "azurerm_communication_service",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Service")
 			return err
 		}
@@ -2164,14 +2285,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "BudgetResourceGroup",
 	}:
 		if err := (&controllersconsumption.BudgetResourceGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("BudgetResourceGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_consumption_budget_resource_group"],
-			TypeName: "azurerm_consumption_budget_resource_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("BudgetResourceGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_consumption_budget_resource_group"],
+			TypeName:         "azurerm_consumption_budget_resource_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "BudgetResourceGroup")
 			return err
 		}
@@ -2181,14 +2303,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "BudgetSubscription",
 	}:
 		if err := (&controllersconsumption.BudgetSubscriptionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("BudgetSubscription"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_consumption_budget_subscription"],
-			TypeName: "azurerm_consumption_budget_subscription",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("BudgetSubscription"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_consumption_budget_subscription"],
+			TypeName:         "azurerm_consumption_budget_subscription",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "BudgetSubscription")
 			return err
 		}
@@ -2198,14 +2321,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Group",
 	}:
 		if err := (&controllerscontainer.GroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Group"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_container_group"],
-			TypeName: "azurerm_container_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Group"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_container_group"],
+			TypeName:         "azurerm_container_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Group")
 			return err
 		}
@@ -2215,14 +2339,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Registry",
 	}:
 		if err := (&controllerscontainer.RegistryReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Registry"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_container_registry"],
-			TypeName: "azurerm_container_registry",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Registry"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_container_registry"],
+			TypeName:         "azurerm_container_registry",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Registry")
 			return err
 		}
@@ -2232,14 +2357,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "RegistryScopeMap",
 	}:
 		if err := (&controllerscontainer.RegistryScopeMapReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("RegistryScopeMap"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_container_registry_scope_map"],
-			TypeName: "azurerm_container_registry_scope_map",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("RegistryScopeMap"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_container_registry_scope_map"],
+			TypeName:         "azurerm_container_registry_scope_map",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "RegistryScopeMap")
 			return err
 		}
@@ -2249,14 +2375,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "RegistryToken",
 	}:
 		if err := (&controllerscontainer.RegistryTokenReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("RegistryToken"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_container_registry_token"],
-			TypeName: "azurerm_container_registry_token",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("RegistryToken"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_container_registry_token"],
+			TypeName:         "azurerm_container_registry_token",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "RegistryToken")
 			return err
 		}
@@ -2266,14 +2393,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "RegistryWebhook",
 	}:
 		if err := (&controllerscontainer.RegistryWebhookReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("RegistryWebhook"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_container_registry_webhook"],
-			TypeName: "azurerm_container_registry_webhook",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("RegistryWebhook"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_container_registry_webhook"],
+			TypeName:         "azurerm_container_registry_webhook",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "RegistryWebhook")
 			return err
 		}
@@ -2283,14 +2411,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Account",
 	}:
 		if err := (&controllerscosmosdb.AccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Account"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_account"],
-			TypeName: "azurerm_cosmosdb_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Account"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_account"],
+			TypeName:         "azurerm_cosmosdb_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Account")
 			return err
 		}
@@ -2300,14 +2429,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CassandraKeyspace",
 	}:
 		if err := (&controllerscosmosdb.CassandraKeyspaceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CassandraKeyspace"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_cassandra_keyspace"],
-			TypeName: "azurerm_cosmosdb_cassandra_keyspace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CassandraKeyspace"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_cassandra_keyspace"],
+			TypeName:         "azurerm_cosmosdb_cassandra_keyspace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CassandraKeyspace")
 			return err
 		}
@@ -2317,14 +2447,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CassandraTable",
 	}:
 		if err := (&controllerscosmosdb.CassandraTableReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CassandraTable"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_cassandra_table"],
-			TypeName: "azurerm_cosmosdb_cassandra_table",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CassandraTable"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_cassandra_table"],
+			TypeName:         "azurerm_cosmosdb_cassandra_table",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CassandraTable")
 			return err
 		}
@@ -2334,14 +2465,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "GremlinDatabase",
 	}:
 		if err := (&controllerscosmosdb.GremlinDatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("GremlinDatabase"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_gremlin_database"],
-			TypeName: "azurerm_cosmosdb_gremlin_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GremlinDatabase"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_gremlin_database"],
+			TypeName:         "azurerm_cosmosdb_gremlin_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "GremlinDatabase")
 			return err
 		}
@@ -2351,14 +2483,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "GremlinGraph",
 	}:
 		if err := (&controllerscosmosdb.GremlinGraphReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("GremlinGraph"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_gremlin_graph"],
-			TypeName: "azurerm_cosmosdb_gremlin_graph",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GremlinGraph"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_gremlin_graph"],
+			TypeName:         "azurerm_cosmosdb_gremlin_graph",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "GremlinGraph")
 			return err
 		}
@@ -2368,14 +2501,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MongoCollection",
 	}:
 		if err := (&controllerscosmosdb.MongoCollectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MongoCollection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_mongo_collection"],
-			TypeName: "azurerm_cosmosdb_mongo_collection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MongoCollection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_mongo_collection"],
+			TypeName:         "azurerm_cosmosdb_mongo_collection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MongoCollection")
 			return err
 		}
@@ -2385,14 +2519,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MongoDatabase",
 	}:
 		if err := (&controllerscosmosdb.MongoDatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MongoDatabase"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_mongo_database"],
-			TypeName: "azurerm_cosmosdb_mongo_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MongoDatabase"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_mongo_database"],
+			TypeName:         "azurerm_cosmosdb_mongo_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MongoDatabase")
 			return err
 		}
@@ -2402,14 +2537,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NotebookWorkspace",
 	}:
 		if err := (&controllerscosmosdb.NotebookWorkspaceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NotebookWorkspace"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_notebook_workspace"],
-			TypeName: "azurerm_cosmosdb_notebook_workspace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NotebookWorkspace"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_notebook_workspace"],
+			TypeName:         "azurerm_cosmosdb_notebook_workspace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NotebookWorkspace")
 			return err
 		}
@@ -2419,14 +2555,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SqlContainer",
 	}:
 		if err := (&controllerscosmosdb.SqlContainerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SqlContainer"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_sql_container"],
-			TypeName: "azurerm_cosmosdb_sql_container",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SqlContainer"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_sql_container"],
+			TypeName:         "azurerm_cosmosdb_sql_container",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SqlContainer")
 			return err
 		}
@@ -2436,14 +2573,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SqlDatabase",
 	}:
 		if err := (&controllerscosmosdb.SqlDatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SqlDatabase"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_sql_database"],
-			TypeName: "azurerm_cosmosdb_sql_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SqlDatabase"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_sql_database"],
+			TypeName:         "azurerm_cosmosdb_sql_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SqlDatabase")
 			return err
 		}
@@ -2453,14 +2591,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SqlFunction",
 	}:
 		if err := (&controllerscosmosdb.SqlFunctionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SqlFunction"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_sql_function"],
-			TypeName: "azurerm_cosmosdb_sql_function",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SqlFunction"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_sql_function"],
+			TypeName:         "azurerm_cosmosdb_sql_function",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SqlFunction")
 			return err
 		}
@@ -2470,14 +2609,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SqlStoredProcedure",
 	}:
 		if err := (&controllerscosmosdb.SqlStoredProcedureReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SqlStoredProcedure"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_sql_stored_procedure"],
-			TypeName: "azurerm_cosmosdb_sql_stored_procedure",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SqlStoredProcedure"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_sql_stored_procedure"],
+			TypeName:         "azurerm_cosmosdb_sql_stored_procedure",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SqlStoredProcedure")
 			return err
 		}
@@ -2487,14 +2627,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SqlTrigger",
 	}:
 		if err := (&controllerscosmosdb.SqlTriggerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SqlTrigger"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_sql_trigger"],
-			TypeName: "azurerm_cosmosdb_sql_trigger",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SqlTrigger"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_sql_trigger"],
+			TypeName:         "azurerm_cosmosdb_sql_trigger",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SqlTrigger")
 			return err
 		}
@@ -2504,14 +2645,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Table",
 	}:
 		if err := (&controllerscosmosdb.TableReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Table"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cosmosdb_table"],
-			TypeName: "azurerm_cosmosdb_table",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Table"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cosmosdb_table"],
+			TypeName:         "azurerm_cosmosdb_table",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Table")
 			return err
 		}
@@ -2521,14 +2663,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ManagementExportResourceGroup",
 	}:
 		if err := (&controllerscost.ManagementExportResourceGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ManagementExportResourceGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_cost_management_export_resource_group"],
-			TypeName: "azurerm_cost_management_export_resource_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ManagementExportResourceGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_cost_management_export_resource_group"],
+			TypeName:         "azurerm_cost_management_export_resource_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ManagementExportResourceGroup")
 			return err
 		}
@@ -2538,14 +2681,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Provider",
 	}:
 		if err := (&controllerscustom.ProviderReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Provider"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_custom_provider"],
-			TypeName: "azurerm_custom_provider",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Provider"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_custom_provider"],
+			TypeName:         "azurerm_custom_provider",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Provider")
 			return err
 		}
@@ -2555,14 +2699,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Dashboard",
 	}:
 		if err := (&controllersdashboard.DashboardReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Dashboard"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dashboard"],
-			TypeName: "azurerm_dashboard",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Dashboard"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dashboard"],
+			TypeName:         "azurerm_dashboard",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Dashboard")
 			return err
 		}
@@ -2572,14 +2717,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Factory",
 	}:
 		if err := (&controllersdata.FactoryReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Factory"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory"],
-			TypeName: "azurerm_data_factory",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Factory"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory"],
+			TypeName:         "azurerm_data_factory",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Factory")
 			return err
 		}
@@ -2589,14 +2735,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryDatasetAzureBlob",
 	}:
 		if err := (&controllersdata.FactoryDatasetAzureBlobReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDatasetAzureBlob"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_azure_blob"],
-			TypeName: "azurerm_data_factory_dataset_azure_blob",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryDatasetAzureBlob"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_azure_blob"],
+			TypeName:         "azurerm_data_factory_dataset_azure_blob",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetAzureBlob")
 			return err
 		}
@@ -2606,14 +2753,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryDatasetCosmosdbSqlapi",
 	}:
 		if err := (&controllersdata.FactoryDatasetCosmosdbSqlapiReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDatasetCosmosdbSqlapi"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_cosmosdb_sqlapi"],
-			TypeName: "azurerm_data_factory_dataset_cosmosdb_sqlapi",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryDatasetCosmosdbSqlapi"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_cosmosdb_sqlapi"],
+			TypeName:         "azurerm_data_factory_dataset_cosmosdb_sqlapi",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetCosmosdbSqlapi")
 			return err
 		}
@@ -2623,14 +2771,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryDatasetDelimitedText",
 	}:
 		if err := (&controllersdata.FactoryDatasetDelimitedTextReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDatasetDelimitedText"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_delimited_text"],
-			TypeName: "azurerm_data_factory_dataset_delimited_text",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryDatasetDelimitedText"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_delimited_text"],
+			TypeName:         "azurerm_data_factory_dataset_delimited_text",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetDelimitedText")
 			return err
 		}
@@ -2640,14 +2789,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryDatasetHTTP",
 	}:
 		if err := (&controllersdata.FactoryDatasetHTTPReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDatasetHTTP"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_http"],
-			TypeName: "azurerm_data_factory_dataset_http",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryDatasetHTTP"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_http"],
+			TypeName:         "azurerm_data_factory_dataset_http",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetHTTP")
 			return err
 		}
@@ -2657,14 +2807,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryDatasetJSON",
 	}:
 		if err := (&controllersdata.FactoryDatasetJSONReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDatasetJSON"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_json"],
-			TypeName: "azurerm_data_factory_dataset_json",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryDatasetJSON"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_json"],
+			TypeName:         "azurerm_data_factory_dataset_json",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetJSON")
 			return err
 		}
@@ -2674,14 +2825,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryDatasetMysql",
 	}:
 		if err := (&controllersdata.FactoryDatasetMysqlReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDatasetMysql"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_mysql"],
-			TypeName: "azurerm_data_factory_dataset_mysql",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryDatasetMysql"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_mysql"],
+			TypeName:         "azurerm_data_factory_dataset_mysql",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetMysql")
 			return err
 		}
@@ -2691,14 +2843,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryDatasetParquet",
 	}:
 		if err := (&controllersdata.FactoryDatasetParquetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDatasetParquet"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_parquet"],
-			TypeName: "azurerm_data_factory_dataset_parquet",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryDatasetParquet"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_parquet"],
+			TypeName:         "azurerm_data_factory_dataset_parquet",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetParquet")
 			return err
 		}
@@ -2708,14 +2861,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryDatasetPostgresql",
 	}:
 		if err := (&controllersdata.FactoryDatasetPostgresqlReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDatasetPostgresql"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_postgresql"],
-			TypeName: "azurerm_data_factory_dataset_postgresql",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryDatasetPostgresql"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_postgresql"],
+			TypeName:         "azurerm_data_factory_dataset_postgresql",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetPostgresql")
 			return err
 		}
@@ -2725,14 +2879,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryDatasetSnowflake",
 	}:
 		if err := (&controllersdata.FactoryDatasetSnowflakeReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDatasetSnowflake"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_snowflake"],
-			TypeName: "azurerm_data_factory_dataset_snowflake",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryDatasetSnowflake"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_snowflake"],
+			TypeName:         "azurerm_data_factory_dataset_snowflake",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetSnowflake")
 			return err
 		}
@@ -2742,14 +2897,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryDatasetSQLServerTable",
 	}:
 		if err := (&controllersdata.FactoryDatasetSQLServerTableReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDatasetSQLServerTable"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_sql_server_table"],
-			TypeName: "azurerm_data_factory_dataset_sql_server_table",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryDatasetSQLServerTable"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_dataset_sql_server_table"],
+			TypeName:         "azurerm_data_factory_dataset_sql_server_table",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetSQLServerTable")
 			return err
 		}
@@ -2759,14 +2915,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryIntegrationRuntimeAzure",
 	}:
 		if err := (&controllersdata.FactoryIntegrationRuntimeAzureReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryIntegrationRuntimeAzure"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_integration_runtime_azure"],
-			TypeName: "azurerm_data_factory_integration_runtime_azure",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryIntegrationRuntimeAzure"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_integration_runtime_azure"],
+			TypeName:         "azurerm_data_factory_integration_runtime_azure",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryIntegrationRuntimeAzure")
 			return err
 		}
@@ -2776,14 +2933,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryIntegrationRuntimeAzureSsis",
 	}:
 		if err := (&controllersdata.FactoryIntegrationRuntimeAzureSsisReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryIntegrationRuntimeAzureSsis"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_integration_runtime_azure_ssis"],
-			TypeName: "azurerm_data_factory_integration_runtime_azure_ssis",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryIntegrationRuntimeAzureSsis"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_integration_runtime_azure_ssis"],
+			TypeName:         "azurerm_data_factory_integration_runtime_azure_ssis",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryIntegrationRuntimeAzureSsis")
 			return err
 		}
@@ -2793,14 +2951,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryIntegrationRuntimeManaged",
 	}:
 		if err := (&controllersdata.FactoryIntegrationRuntimeManagedReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryIntegrationRuntimeManaged"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_integration_runtime_managed"],
-			TypeName: "azurerm_data_factory_integration_runtime_managed",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryIntegrationRuntimeManaged"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_integration_runtime_managed"],
+			TypeName:         "azurerm_data_factory_integration_runtime_managed",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryIntegrationRuntimeManaged")
 			return err
 		}
@@ -2810,15 +2969,34 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryIntegrationRuntimeSelfHosted",
 	}:
 		if err := (&controllersdata.FactoryIntegrationRuntimeSelfHostedReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryIntegrationRuntimeSelfHosted"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_integration_runtime_self_hosted"],
-			TypeName: "azurerm_data_factory_integration_runtime_self_hosted",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryIntegrationRuntimeSelfHosted"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_integration_runtime_self_hosted"],
+			TypeName:         "azurerm_data_factory_integration_runtime_self_hosted",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryIntegrationRuntimeSelfHosted")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FactoryLinkedCustomService",
+	}:
+		if err := (&controllersdata.FactoryLinkedCustomServiceReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedCustomService"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_custom_service"],
+			TypeName:         "azurerm_data_factory_linked_custom_service",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedCustomService")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -2827,14 +3005,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceAzureBlobStorage",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceAzureBlobStorageReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureBlobStorage"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_blob_storage"],
-			TypeName: "azurerm_data_factory_linked_service_azure_blob_storage",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureBlobStorage"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_blob_storage"],
+			TypeName:         "azurerm_data_factory_linked_service_azure_blob_storage",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceAzureBlobStorage")
 			return err
 		}
@@ -2844,14 +3023,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceAzureDatabricks",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceAzureDatabricksReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureDatabricks"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_databricks"],
-			TypeName: "azurerm_data_factory_linked_service_azure_databricks",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureDatabricks"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_databricks"],
+			TypeName:         "azurerm_data_factory_linked_service_azure_databricks",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceAzureDatabricks")
 			return err
 		}
@@ -2861,14 +3041,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceAzureFileStorage",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceAzureFileStorageReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureFileStorage"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_file_storage"],
-			TypeName: "azurerm_data_factory_linked_service_azure_file_storage",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureFileStorage"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_file_storage"],
+			TypeName:         "azurerm_data_factory_linked_service_azure_file_storage",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceAzureFileStorage")
 			return err
 		}
@@ -2878,14 +3059,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceAzureFunction",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceAzureFunctionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureFunction"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_function"],
-			TypeName: "azurerm_data_factory_linked_service_azure_function",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureFunction"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_function"],
+			TypeName:         "azurerm_data_factory_linked_service_azure_function",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceAzureFunction")
 			return err
 		}
@@ -2895,14 +3077,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceAzureSearch",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceAzureSearchReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureSearch"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_search"],
-			TypeName: "azurerm_data_factory_linked_service_azure_search",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureSearch"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_search"],
+			TypeName:         "azurerm_data_factory_linked_service_azure_search",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceAzureSearch")
 			return err
 		}
@@ -2912,14 +3095,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceAzureSQLDatabase",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceAzureSQLDatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureSQLDatabase"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_sql_database"],
-			TypeName: "azurerm_data_factory_linked_service_azure_sql_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureSQLDatabase"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_sql_database"],
+			TypeName:         "azurerm_data_factory_linked_service_azure_sql_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceAzureSQLDatabase")
 			return err
 		}
@@ -2929,14 +3113,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceAzureTableStorage",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceAzureTableStorageReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureTableStorage"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_table_storage"],
-			TypeName: "azurerm_data_factory_linked_service_azure_table_storage",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceAzureTableStorage"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_azure_table_storage"],
+			TypeName:         "azurerm_data_factory_linked_service_azure_table_storage",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceAzureTableStorage")
 			return err
 		}
@@ -2946,14 +3131,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceCosmosdb",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceCosmosdbReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceCosmosdb"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_cosmosdb"],
-			TypeName: "azurerm_data_factory_linked_service_cosmosdb",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceCosmosdb"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_cosmosdb"],
+			TypeName:         "azurerm_data_factory_linked_service_cosmosdb",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceCosmosdb")
 			return err
 		}
@@ -2963,14 +3149,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceDataLakeStorageGen2",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceDataLakeStorageGen2Reconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceDataLakeStorageGen2"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_data_lake_storage_gen2"],
-			TypeName: "azurerm_data_factory_linked_service_data_lake_storage_gen2",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceDataLakeStorageGen2"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_data_lake_storage_gen2"],
+			TypeName:         "azurerm_data_factory_linked_service_data_lake_storage_gen2",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceDataLakeStorageGen2")
 			return err
 		}
@@ -2980,14 +3167,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceKeyVault",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceKeyVaultReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceKeyVault"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_key_vault"],
-			TypeName: "azurerm_data_factory_linked_service_key_vault",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceKeyVault"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_key_vault"],
+			TypeName:         "azurerm_data_factory_linked_service_key_vault",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceKeyVault")
 			return err
 		}
@@ -2997,14 +3185,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceKusto",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceKustoReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceKusto"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_kusto"],
-			TypeName: "azurerm_data_factory_linked_service_kusto",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceKusto"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_kusto"],
+			TypeName:         "azurerm_data_factory_linked_service_kusto",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceKusto")
 			return err
 		}
@@ -3014,14 +3203,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceMysql",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceMysqlReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceMysql"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_mysql"],
-			TypeName: "azurerm_data_factory_linked_service_mysql",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceMysql"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_mysql"],
+			TypeName:         "azurerm_data_factory_linked_service_mysql",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceMysql")
 			return err
 		}
@@ -3031,14 +3221,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceOdata",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceOdataReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceOdata"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_odata"],
-			TypeName: "azurerm_data_factory_linked_service_odata",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceOdata"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_odata"],
+			TypeName:         "azurerm_data_factory_linked_service_odata",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceOdata")
 			return err
 		}
@@ -3048,14 +3239,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServicePostgresql",
 	}:
 		if err := (&controllersdata.FactoryLinkedServicePostgresqlReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServicePostgresql"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_postgresql"],
-			TypeName: "azurerm_data_factory_linked_service_postgresql",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServicePostgresql"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_postgresql"],
+			TypeName:         "azurerm_data_factory_linked_service_postgresql",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServicePostgresql")
 			return err
 		}
@@ -3065,14 +3257,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceSftp",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceSftpReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceSftp"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_sftp"],
-			TypeName: "azurerm_data_factory_linked_service_sftp",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceSftp"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_sftp"],
+			TypeName:         "azurerm_data_factory_linked_service_sftp",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceSftp")
 			return err
 		}
@@ -3082,14 +3275,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceSnowflake",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceSnowflakeReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceSnowflake"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_snowflake"],
-			TypeName: "azurerm_data_factory_linked_service_snowflake",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceSnowflake"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_snowflake"],
+			TypeName:         "azurerm_data_factory_linked_service_snowflake",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceSnowflake")
 			return err
 		}
@@ -3099,14 +3293,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceSQLServer",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceSQLServerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceSQLServer"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_sql_server"],
-			TypeName: "azurerm_data_factory_linked_service_sql_server",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceSQLServer"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_sql_server"],
+			TypeName:         "azurerm_data_factory_linked_service_sql_server",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceSQLServer")
 			return err
 		}
@@ -3116,14 +3311,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceSynapse",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceSynapseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceSynapse"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_synapse"],
-			TypeName: "azurerm_data_factory_linked_service_synapse",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceSynapse"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_synapse"],
+			TypeName:         "azurerm_data_factory_linked_service_synapse",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceSynapse")
 			return err
 		}
@@ -3133,14 +3329,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryLinkedServiceWeb",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceWebReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceWeb"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_web"],
-			TypeName: "azurerm_data_factory_linked_service_web",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceWeb"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_linked_service_web"],
+			TypeName:         "azurerm_data_factory_linked_service_web",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceWeb")
 			return err
 		}
@@ -3150,15 +3347,34 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryPipeline",
 	}:
 		if err := (&controllersdata.FactoryPipelineReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryPipeline"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_pipeline"],
-			TypeName: "azurerm_data_factory_pipeline",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryPipeline"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_pipeline"],
+			TypeName:         "azurerm_data_factory_pipeline",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryPipeline")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FactoryTriggerBlobEvent",
+	}:
+		if err := (&controllersdata.FactoryTriggerBlobEventReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryTriggerBlobEvent"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_trigger_blob_event"],
+			TypeName:         "azurerm_data_factory_trigger_blob_event",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FactoryTriggerBlobEvent")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -3167,14 +3383,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FactoryTriggerSchedule",
 	}:
 		if err := (&controllersdata.FactoryTriggerScheduleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FactoryTriggerSchedule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_factory_trigger_schedule"],
-			TypeName: "azurerm_data_factory_trigger_schedule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FactoryTriggerSchedule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_factory_trigger_schedule"],
+			TypeName:         "azurerm_data_factory_trigger_schedule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryTriggerSchedule")
 			return err
 		}
@@ -3184,14 +3401,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LakeAnalyticsAccount",
 	}:
 		if err := (&controllersdata.LakeAnalyticsAccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LakeAnalyticsAccount"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_lake_analytics_account"],
-			TypeName: "azurerm_data_lake_analytics_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LakeAnalyticsAccount"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_lake_analytics_account"],
+			TypeName:         "azurerm_data_lake_analytics_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LakeAnalyticsAccount")
 			return err
 		}
@@ -3201,14 +3419,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LakeAnalyticsFirewallRule",
 	}:
 		if err := (&controllersdata.LakeAnalyticsFirewallRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LakeAnalyticsFirewallRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_lake_analytics_firewall_rule"],
-			TypeName: "azurerm_data_lake_analytics_firewall_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LakeAnalyticsFirewallRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_lake_analytics_firewall_rule"],
+			TypeName:         "azurerm_data_lake_analytics_firewall_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LakeAnalyticsFirewallRule")
 			return err
 		}
@@ -3218,14 +3437,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LakeStore",
 	}:
 		if err := (&controllersdata.LakeStoreReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LakeStore"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_lake_store"],
-			TypeName: "azurerm_data_lake_store",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LakeStore"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_lake_store"],
+			TypeName:         "azurerm_data_lake_store",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LakeStore")
 			return err
 		}
@@ -3235,14 +3455,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LakeStoreFile",
 	}:
 		if err := (&controllersdata.LakeStoreFileReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LakeStoreFile"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_lake_store_file"],
-			TypeName: "azurerm_data_lake_store_file",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LakeStoreFile"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_lake_store_file"],
+			TypeName:         "azurerm_data_lake_store_file",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LakeStoreFile")
 			return err
 		}
@@ -3252,14 +3473,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LakeStoreFirewallRule",
 	}:
 		if err := (&controllersdata.LakeStoreFirewallRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LakeStoreFirewallRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_lake_store_firewall_rule"],
-			TypeName: "azurerm_data_lake_store_firewall_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LakeStoreFirewallRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_lake_store_firewall_rule"],
+			TypeName:         "azurerm_data_lake_store_firewall_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LakeStoreFirewallRule")
 			return err
 		}
@@ -3269,14 +3491,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LakeStoreVirtualNetworkRule",
 	}:
 		if err := (&controllersdata.LakeStoreVirtualNetworkRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LakeStoreVirtualNetworkRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_lake_store_virtual_network_rule"],
-			TypeName: "azurerm_data_lake_store_virtual_network_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LakeStoreVirtualNetworkRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_lake_store_virtual_network_rule"],
+			TypeName:         "azurerm_data_lake_store_virtual_network_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LakeStoreVirtualNetworkRule")
 			return err
 		}
@@ -3286,14 +3509,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ProtectionBackupInstancePostgresql",
 	}:
 		if err := (&controllersdata.ProtectionBackupInstancePostgresqlReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ProtectionBackupInstancePostgresql"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_protection_backup_instance_postgresql"],
-			TypeName: "azurerm_data_protection_backup_instance_postgresql",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ProtectionBackupInstancePostgresql"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_protection_backup_instance_postgresql"],
+			TypeName:         "azurerm_data_protection_backup_instance_postgresql",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProtectionBackupInstancePostgresql")
 			return err
 		}
@@ -3303,14 +3527,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ProtectionBackupPolicyPostgresql",
 	}:
 		if err := (&controllersdata.ProtectionBackupPolicyPostgresqlReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ProtectionBackupPolicyPostgresql"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_protection_backup_policy_postgresql"],
-			TypeName: "azurerm_data_protection_backup_policy_postgresql",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ProtectionBackupPolicyPostgresql"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_protection_backup_policy_postgresql"],
+			TypeName:         "azurerm_data_protection_backup_policy_postgresql",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProtectionBackupPolicyPostgresql")
 			return err
 		}
@@ -3320,14 +3545,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ProtectionBackupVault",
 	}:
 		if err := (&controllersdata.ProtectionBackupVaultReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ProtectionBackupVault"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_protection_backup_vault"],
-			TypeName: "azurerm_data_protection_backup_vault",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ProtectionBackupVault"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_protection_backup_vault"],
+			TypeName:         "azurerm_data_protection_backup_vault",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProtectionBackupVault")
 			return err
 		}
@@ -3337,14 +3563,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Share",
 	}:
 		if err := (&controllersdata.ShareReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Share"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_share"],
-			TypeName: "azurerm_data_share",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Share"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_share"],
+			TypeName:         "azurerm_data_share",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Share")
 			return err
 		}
@@ -3354,14 +3581,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ShareAccount",
 	}:
 		if err := (&controllersdata.ShareAccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ShareAccount"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_share_account"],
-			TypeName: "azurerm_data_share_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ShareAccount"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_share_account"],
+			TypeName:         "azurerm_data_share_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ShareAccount")
 			return err
 		}
@@ -3371,14 +3599,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ShareDatasetBlobStorage",
 	}:
 		if err := (&controllersdata.ShareDatasetBlobStorageReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ShareDatasetBlobStorage"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_share_dataset_blob_storage"],
-			TypeName: "azurerm_data_share_dataset_blob_storage",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ShareDatasetBlobStorage"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_share_dataset_blob_storage"],
+			TypeName:         "azurerm_data_share_dataset_blob_storage",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ShareDatasetBlobStorage")
 			return err
 		}
@@ -3388,14 +3617,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ShareDatasetDataLakeGen1",
 	}:
 		if err := (&controllersdata.ShareDatasetDataLakeGen1Reconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ShareDatasetDataLakeGen1"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_share_dataset_data_lake_gen1"],
-			TypeName: "azurerm_data_share_dataset_data_lake_gen1",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ShareDatasetDataLakeGen1"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_share_dataset_data_lake_gen1"],
+			TypeName:         "azurerm_data_share_dataset_data_lake_gen1",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ShareDatasetDataLakeGen1")
 			return err
 		}
@@ -3405,14 +3635,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ShareDatasetDataLakeGen2",
 	}:
 		if err := (&controllersdata.ShareDatasetDataLakeGen2Reconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ShareDatasetDataLakeGen2"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_share_dataset_data_lake_gen2"],
-			TypeName: "azurerm_data_share_dataset_data_lake_gen2",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ShareDatasetDataLakeGen2"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_share_dataset_data_lake_gen2"],
+			TypeName:         "azurerm_data_share_dataset_data_lake_gen2",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ShareDatasetDataLakeGen2")
 			return err
 		}
@@ -3422,14 +3653,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ShareDatasetKustoCluster",
 	}:
 		if err := (&controllersdata.ShareDatasetKustoClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ShareDatasetKustoCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_share_dataset_kusto_cluster"],
-			TypeName: "azurerm_data_share_dataset_kusto_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ShareDatasetKustoCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_share_dataset_kusto_cluster"],
+			TypeName:         "azurerm_data_share_dataset_kusto_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ShareDatasetKustoCluster")
 			return err
 		}
@@ -3439,14 +3671,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ShareDatasetKustoDatabase",
 	}:
 		if err := (&controllersdata.ShareDatasetKustoDatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ShareDatasetKustoDatabase"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_data_share_dataset_kusto_database"],
-			TypeName: "azurerm_data_share_dataset_kusto_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ShareDatasetKustoDatabase"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_data_share_dataset_kusto_database"],
+			TypeName:         "azurerm_data_share_dataset_kusto_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ShareDatasetKustoDatabase")
 			return err
 		}
@@ -3456,14 +3689,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MigrationProject",
 	}:
 		if err := (&controllersdatabase.MigrationProjectReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MigrationProject"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_database_migration_project"],
-			TypeName: "azurerm_database_migration_project",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MigrationProject"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_database_migration_project"],
+			TypeName:         "azurerm_database_migration_project",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MigrationProject")
 			return err
 		}
@@ -3473,14 +3707,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MigrationService",
 	}:
 		if err := (&controllersdatabase.MigrationServiceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MigrationService"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_database_migration_service"],
-			TypeName: "azurerm_database_migration_service",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MigrationService"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_database_migration_service"],
+			TypeName:         "azurerm_database_migration_service",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MigrationService")
 			return err
 		}
@@ -3490,14 +3725,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EdgeDevice",
 	}:
 		if err := (&controllersdatabox.EdgeDeviceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EdgeDevice"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_databox_edge_device"],
-			TypeName: "azurerm_databox_edge_device",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EdgeDevice"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_databox_edge_device"],
+			TypeName:         "azurerm_databox_edge_device",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EdgeDevice")
 			return err
 		}
@@ -3507,14 +3743,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EdgeOrder",
 	}:
 		if err := (&controllersdatabox.EdgeOrderReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EdgeOrder"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_databox_edge_order"],
-			TypeName: "azurerm_databox_edge_order",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EdgeOrder"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_databox_edge_order"],
+			TypeName:         "azurerm_databox_edge_order",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EdgeOrder")
 			return err
 		}
@@ -3524,14 +3761,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Workspace",
 	}:
 		if err := (&controllersdatabricks.WorkspaceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Workspace"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_databricks_workspace"],
-			TypeName: "azurerm_databricks_workspace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Workspace"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_databricks_workspace"],
+			TypeName:         "azurerm_databricks_workspace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Workspace")
 			return err
 		}
@@ -3541,14 +3779,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SecurityModule",
 	}:
 		if err := (&controllersdedicatedhardware.SecurityModuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SecurityModule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dedicated_hardware_security_module"],
-			TypeName: "azurerm_dedicated_hardware_security_module",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SecurityModule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dedicated_hardware_security_module"],
+			TypeName:         "azurerm_dedicated_hardware_security_module",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SecurityModule")
 			return err
 		}
@@ -3558,14 +3797,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DedicatedHost",
 	}:
 		if err := (&controllersdedicatedhost.DedicatedHostReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DedicatedHost"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dedicated_host"],
-			TypeName: "azurerm_dedicated_host",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DedicatedHost"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dedicated_host"],
+			TypeName:         "azurerm_dedicated_host",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DedicatedHost")
 			return err
 		}
@@ -3575,14 +3815,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Group",
 	}:
 		if err := (&controllersdedicatedhost.GroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Group"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dedicated_host_group"],
-			TypeName: "azurerm_dedicated_host_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Group"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dedicated_host_group"],
+			TypeName:         "azurerm_dedicated_host_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Group")
 			return err
 		}
@@ -3592,14 +3833,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "GlobalVmShutdownSchedule",
 	}:
 		if err := (&controllersdevtest.GlobalVmShutdownScheduleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("GlobalVmShutdownSchedule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dev_test_global_vm_shutdown_schedule"],
-			TypeName: "azurerm_dev_test_global_vm_shutdown_schedule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GlobalVmShutdownSchedule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dev_test_global_vm_shutdown_schedule"],
+			TypeName:         "azurerm_dev_test_global_vm_shutdown_schedule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "GlobalVmShutdownSchedule")
 			return err
 		}
@@ -3609,14 +3851,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Lab",
 	}:
 		if err := (&controllersdevtest.LabReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Lab"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dev_test_lab"],
-			TypeName: "azurerm_dev_test_lab",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Lab"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dev_test_lab"],
+			TypeName:         "azurerm_dev_test_lab",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Lab")
 			return err
 		}
@@ -3626,14 +3869,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LinuxVirtualMachine",
 	}:
 		if err := (&controllersdevtest.LinuxVirtualMachineReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LinuxVirtualMachine"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dev_test_linux_virtual_machine"],
-			TypeName: "azurerm_dev_test_linux_virtual_machine",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LinuxVirtualMachine"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dev_test_linux_virtual_machine"],
+			TypeName:         "azurerm_dev_test_linux_virtual_machine",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LinuxVirtualMachine")
 			return err
 		}
@@ -3643,14 +3887,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Policy",
 	}:
 		if err := (&controllersdevtest.PolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Policy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dev_test_policy"],
-			TypeName: "azurerm_dev_test_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Policy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dev_test_policy"],
+			TypeName:         "azurerm_dev_test_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Policy")
 			return err
 		}
@@ -3660,14 +3905,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Schedule",
 	}:
 		if err := (&controllersdevtest.ScheduleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Schedule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dev_test_schedule"],
-			TypeName: "azurerm_dev_test_schedule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Schedule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dev_test_schedule"],
+			TypeName:         "azurerm_dev_test_schedule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Schedule")
 			return err
 		}
@@ -3677,14 +3923,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualNetwork",
 	}:
 		if err := (&controllersdevtest.VirtualNetworkReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualNetwork"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dev_test_virtual_network"],
-			TypeName: "azurerm_dev_test_virtual_network",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualNetwork"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dev_test_virtual_network"],
+			TypeName:         "azurerm_dev_test_virtual_network",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualNetwork")
 			return err
 		}
@@ -3694,14 +3941,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "WindowsVirtualMachine",
 	}:
 		if err := (&controllersdevtest.WindowsVirtualMachineReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("WindowsVirtualMachine"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dev_test_windows_virtual_machine"],
-			TypeName: "azurerm_dev_test_windows_virtual_machine",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("WindowsVirtualMachine"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dev_test_windows_virtual_machine"],
+			TypeName:         "azurerm_dev_test_windows_virtual_machine",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "WindowsVirtualMachine")
 			return err
 		}
@@ -3711,14 +3959,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Controller",
 	}:
 		if err := (&controllersdevspace.ControllerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Controller"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_devspace_controller"],
-			TypeName: "azurerm_devspace_controller",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Controller"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_devspace_controller"],
+			TypeName:         "azurerm_devspace_controller",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Controller")
 			return err
 		}
@@ -3728,14 +3977,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TwinsEndpointEventgrid",
 	}:
 		if err := (&controllersdigital.TwinsEndpointEventgridReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TwinsEndpointEventgrid"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_digital_twins_endpoint_eventgrid"],
-			TypeName: "azurerm_digital_twins_endpoint_eventgrid",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TwinsEndpointEventgrid"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_digital_twins_endpoint_eventgrid"],
+			TypeName:         "azurerm_digital_twins_endpoint_eventgrid",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TwinsEndpointEventgrid")
 			return err
 		}
@@ -3745,14 +3995,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TwinsEndpointEventhub",
 	}:
 		if err := (&controllersdigital.TwinsEndpointEventhubReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TwinsEndpointEventhub"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_digital_twins_endpoint_eventhub"],
-			TypeName: "azurerm_digital_twins_endpoint_eventhub",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TwinsEndpointEventhub"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_digital_twins_endpoint_eventhub"],
+			TypeName:         "azurerm_digital_twins_endpoint_eventhub",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TwinsEndpointEventhub")
 			return err
 		}
@@ -3762,14 +4013,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TwinsEndpointServicebus",
 	}:
 		if err := (&controllersdigital.TwinsEndpointServicebusReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TwinsEndpointServicebus"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_digital_twins_endpoint_servicebus"],
-			TypeName: "azurerm_digital_twins_endpoint_servicebus",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TwinsEndpointServicebus"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_digital_twins_endpoint_servicebus"],
+			TypeName:         "azurerm_digital_twins_endpoint_servicebus",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TwinsEndpointServicebus")
 			return err
 		}
@@ -3779,14 +4031,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TwinsInstance",
 	}:
 		if err := (&controllersdigital.TwinsInstanceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TwinsInstance"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_digital_twins_instance"],
-			TypeName: "azurerm_digital_twins_instance",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TwinsInstance"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_digital_twins_instance"],
+			TypeName:         "azurerm_digital_twins_instance",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TwinsInstance")
 			return err
 		}
@@ -3796,14 +4049,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Access",
 	}:
 		if err := (&controllersdisk.AccessReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Access"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_disk_access"],
-			TypeName: "azurerm_disk_access",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Access"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_disk_access"],
+			TypeName:         "azurerm_disk_access",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Access")
 			return err
 		}
@@ -3813,14 +4067,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EncryptionSet",
 	}:
 		if err := (&controllersdisk.EncryptionSetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EncryptionSet"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_disk_encryption_set"],
-			TypeName: "azurerm_disk_encryption_set",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EncryptionSet"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_disk_encryption_set"],
+			TypeName:         "azurerm_disk_encryption_set",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EncryptionSet")
 			return err
 		}
@@ -3830,14 +4085,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ARecord",
 	}:
 		if err := (&controllersdns.ARecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ARecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dns_a_record"],
-			TypeName: "azurerm_dns_a_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ARecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dns_a_record"],
+			TypeName:         "azurerm_dns_a_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ARecord")
 			return err
 		}
@@ -3847,14 +4103,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AaaaRecord",
 	}:
 		if err := (&controllersdns.AaaaRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AaaaRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dns_aaaa_record"],
-			TypeName: "azurerm_dns_aaaa_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AaaaRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dns_aaaa_record"],
+			TypeName:         "azurerm_dns_aaaa_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AaaaRecord")
 			return err
 		}
@@ -3864,14 +4121,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CaaRecord",
 	}:
 		if err := (&controllersdns.CaaRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CaaRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dns_caa_record"],
-			TypeName: "azurerm_dns_caa_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CaaRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dns_caa_record"],
+			TypeName:         "azurerm_dns_caa_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CaaRecord")
 			return err
 		}
@@ -3881,14 +4139,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CnameRecord",
 	}:
 		if err := (&controllersdns.CnameRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CnameRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dns_cname_record"],
-			TypeName: "azurerm_dns_cname_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CnameRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dns_cname_record"],
+			TypeName:         "azurerm_dns_cname_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CnameRecord")
 			return err
 		}
@@ -3898,14 +4157,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MxRecord",
 	}:
 		if err := (&controllersdns.MxRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MxRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dns_mx_record"],
-			TypeName: "azurerm_dns_mx_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MxRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dns_mx_record"],
+			TypeName:         "azurerm_dns_mx_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MxRecord")
 			return err
 		}
@@ -3915,14 +4175,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NsRecord",
 	}:
 		if err := (&controllersdns.NsRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NsRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dns_ns_record"],
-			TypeName: "azurerm_dns_ns_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NsRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dns_ns_record"],
+			TypeName:         "azurerm_dns_ns_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NsRecord")
 			return err
 		}
@@ -3932,14 +4193,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "PtrRecord",
 	}:
 		if err := (&controllersdns.PtrRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("PtrRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dns_ptr_record"],
-			TypeName: "azurerm_dns_ptr_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("PtrRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dns_ptr_record"],
+			TypeName:         "azurerm_dns_ptr_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "PtrRecord")
 			return err
 		}
@@ -3949,14 +4211,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SrvRecord",
 	}:
 		if err := (&controllersdns.SrvRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SrvRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dns_srv_record"],
-			TypeName: "azurerm_dns_srv_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SrvRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dns_srv_record"],
+			TypeName:         "azurerm_dns_srv_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SrvRecord")
 			return err
 		}
@@ -3966,14 +4229,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TxtRecord",
 	}:
 		if err := (&controllersdns.TxtRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TxtRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dns_txt_record"],
-			TypeName: "azurerm_dns_txt_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TxtRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dns_txt_record"],
+			TypeName:         "azurerm_dns_txt_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TxtRecord")
 			return err
 		}
@@ -3983,14 +4247,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Zone",
 	}:
 		if err := (&controllersdns.ZoneReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Zone"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_dns_zone"],
-			TypeName: "azurerm_dns_zone",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Zone"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_dns_zone"],
+			TypeName:         "azurerm_dns_zone",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Zone")
 			return err
 		}
@@ -4000,14 +4265,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Domain",
 	}:
 		if err := (&controllerseventgrid.DomainReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Domain"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventgrid_domain"],
-			TypeName: "azurerm_eventgrid_domain",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Domain"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventgrid_domain"],
+			TypeName:         "azurerm_eventgrid_domain",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Domain")
 			return err
 		}
@@ -4017,14 +4283,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DomainTopic",
 	}:
 		if err := (&controllerseventgrid.DomainTopicReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DomainTopic"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventgrid_domain_topic"],
-			TypeName: "azurerm_eventgrid_domain_topic",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DomainTopic"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventgrid_domain_topic"],
+			TypeName:         "azurerm_eventgrid_domain_topic",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DomainTopic")
 			return err
 		}
@@ -4034,14 +4301,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EventSubscription",
 	}:
 		if err := (&controllerseventgrid.EventSubscriptionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EventSubscription"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventgrid_event_subscription"],
-			TypeName: "azurerm_eventgrid_event_subscription",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EventSubscription"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventgrid_event_subscription"],
+			TypeName:         "azurerm_eventgrid_event_subscription",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EventSubscription")
 			return err
 		}
@@ -4051,14 +4319,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SystemTopic",
 	}:
 		if err := (&controllerseventgrid.SystemTopicReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SystemTopic"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventgrid_system_topic"],
-			TypeName: "azurerm_eventgrid_system_topic",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SystemTopic"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventgrid_system_topic"],
+			TypeName:         "azurerm_eventgrid_system_topic",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SystemTopic")
 			return err
 		}
@@ -4068,14 +4337,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SystemTopicEventSubscription",
 	}:
 		if err := (&controllerseventgrid.SystemTopicEventSubscriptionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SystemTopicEventSubscription"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventgrid_system_topic_event_subscription"],
-			TypeName: "azurerm_eventgrid_system_topic_event_subscription",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SystemTopicEventSubscription"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventgrid_system_topic_event_subscription"],
+			TypeName:         "azurerm_eventgrid_system_topic_event_subscription",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SystemTopicEventSubscription")
 			return err
 		}
@@ -4085,14 +4355,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Topic",
 	}:
 		if err := (&controllerseventgrid.TopicReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Topic"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventgrid_topic"],
-			TypeName: "azurerm_eventgrid_topic",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Topic"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventgrid_topic"],
+			TypeName:         "azurerm_eventgrid_topic",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Topic")
 			return err
 		}
@@ -4102,14 +4373,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Eventhub",
 	}:
 		if err := (&controllerseventhub.EventhubReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Eventhub"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventhub"],
-			TypeName: "azurerm_eventhub",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Eventhub"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventhub"],
+			TypeName:         "azurerm_eventhub",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Eventhub")
 			return err
 		}
@@ -4119,14 +4391,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AuthorizationRule",
 	}:
 		if err := (&controllerseventhub.AuthorizationRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AuthorizationRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventhub_authorization_rule"],
-			TypeName: "azurerm_eventhub_authorization_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AuthorizationRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventhub_authorization_rule"],
+			TypeName:         "azurerm_eventhub_authorization_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AuthorizationRule")
 			return err
 		}
@@ -4136,14 +4409,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Cluster",
 	}:
 		if err := (&controllerseventhub.ClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Cluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventhub_cluster"],
-			TypeName: "azurerm_eventhub_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Cluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventhub_cluster"],
+			TypeName:         "azurerm_eventhub_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Cluster")
 			return err
 		}
@@ -4153,14 +4427,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ConsumerGroup",
 	}:
 		if err := (&controllerseventhub.ConsumerGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ConsumerGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventhub_consumer_group"],
-			TypeName: "azurerm_eventhub_consumer_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ConsumerGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventhub_consumer_group"],
+			TypeName:         "azurerm_eventhub_consumer_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ConsumerGroup")
 			return err
 		}
@@ -4170,14 +4445,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Namespace_",
 	}:
 		if err := (&controllerseventhub.Namespace_Reconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Namespace_"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventhub_namespace"],
-			TypeName: "azurerm_eventhub_namespace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Namespace_"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventhub_namespace"],
+			TypeName:         "azurerm_eventhub_namespace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Namespace_")
 			return err
 		}
@@ -4187,14 +4463,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NamespaceAuthorizationRule",
 	}:
 		if err := (&controllerseventhub.NamespaceAuthorizationRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NamespaceAuthorizationRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventhub_namespace_authorization_rule"],
-			TypeName: "azurerm_eventhub_namespace_authorization_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NamespaceAuthorizationRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventhub_namespace_authorization_rule"],
+			TypeName:         "azurerm_eventhub_namespace_authorization_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NamespaceAuthorizationRule")
 			return err
 		}
@@ -4204,14 +4481,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NamespaceCustomerManagedKey",
 	}:
 		if err := (&controllerseventhub.NamespaceCustomerManagedKeyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NamespaceCustomerManagedKey"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventhub_namespace_customer_managed_key"],
-			TypeName: "azurerm_eventhub_namespace_customer_managed_key",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NamespaceCustomerManagedKey"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventhub_namespace_customer_managed_key"],
+			TypeName:         "azurerm_eventhub_namespace_customer_managed_key",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NamespaceCustomerManagedKey")
 			return err
 		}
@@ -4221,14 +4499,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NamespaceDisasterRecoveryConfig",
 	}:
 		if err := (&controllerseventhub.NamespaceDisasterRecoveryConfigReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NamespaceDisasterRecoveryConfig"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_eventhub_namespace_disaster_recovery_config"],
-			TypeName: "azurerm_eventhub_namespace_disaster_recovery_config",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NamespaceDisasterRecoveryConfig"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_eventhub_namespace_disaster_recovery_config"],
+			TypeName:         "azurerm_eventhub_namespace_disaster_recovery_config",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NamespaceDisasterRecoveryConfig")
 			return err
 		}
@@ -4238,14 +4517,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Circuit",
 	}:
 		if err := (&controllersexpressroute.CircuitReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Circuit"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_express_route_circuit"],
-			TypeName: "azurerm_express_route_circuit",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Circuit"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_express_route_circuit"],
+			TypeName:         "azurerm_express_route_circuit",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Circuit")
 			return err
 		}
@@ -4255,15 +4535,34 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CircuitAuthorization",
 	}:
 		if err := (&controllersexpressroute.CircuitAuthorizationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CircuitAuthorization"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_express_route_circuit_authorization"],
-			TypeName: "azurerm_express_route_circuit_authorization",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CircuitAuthorization"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_express_route_circuit_authorization"],
+			TypeName:         "azurerm_express_route_circuit_authorization",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CircuitAuthorization")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "expressroute.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "CircuitConnection",
+	}:
+		if err := (&controllersexpressroute.CircuitConnectionReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CircuitConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_express_route_circuit_connection"],
+			TypeName:         "azurerm_express_route_circuit_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "CircuitConnection")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -4272,15 +4571,34 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CircuitPeering",
 	}:
 		if err := (&controllersexpressroute.CircuitPeeringReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CircuitPeering"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_express_route_circuit_peering"],
-			TypeName: "azurerm_express_route_circuit_peering",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CircuitPeering"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_express_route_circuit_peering"],
+			TypeName:         "azurerm_express_route_circuit_peering",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CircuitPeering")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "expressroute.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Connection",
+	}:
+		if err := (&controllersexpressroute.ConnectionReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Connection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_express_route_connection"],
+			TypeName:         "azurerm_express_route_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Connection")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -4289,14 +4607,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Gateway",
 	}:
 		if err := (&controllersexpressroute.GatewayReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Gateway"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_express_route_gateway"],
-			TypeName: "azurerm_express_route_gateway",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Gateway"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_express_route_gateway"],
+			TypeName:         "azurerm_express_route_gateway",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Gateway")
 			return err
 		}
@@ -4306,14 +4625,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Port",
 	}:
 		if err := (&controllersexpressroute.PortReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Port"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_express_route_port"],
-			TypeName: "azurerm_express_route_port",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Port"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_express_route_port"],
+			TypeName:         "azurerm_express_route_port",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Port")
 			return err
 		}
@@ -4323,14 +4643,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Firewall",
 	}:
 		if err := (&controllersfirewall.FirewallReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Firewall"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_firewall"],
-			TypeName: "azurerm_firewall",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Firewall"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_firewall"],
+			TypeName:         "azurerm_firewall",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Firewall")
 			return err
 		}
@@ -4340,14 +4661,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ApplicationRuleCollection",
 	}:
 		if err := (&controllersfirewall.ApplicationRuleCollectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ApplicationRuleCollection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_firewall_application_rule_collection"],
-			TypeName: "azurerm_firewall_application_rule_collection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ApplicationRuleCollection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_firewall_application_rule_collection"],
+			TypeName:         "azurerm_firewall_application_rule_collection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ApplicationRuleCollection")
 			return err
 		}
@@ -4357,14 +4679,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NatRuleCollection",
 	}:
 		if err := (&controllersfirewall.NatRuleCollectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NatRuleCollection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_firewall_nat_rule_collection"],
-			TypeName: "azurerm_firewall_nat_rule_collection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NatRuleCollection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_firewall_nat_rule_collection"],
+			TypeName:         "azurerm_firewall_nat_rule_collection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NatRuleCollection")
 			return err
 		}
@@ -4374,14 +4697,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NetworkRuleCollection",
 	}:
 		if err := (&controllersfirewall.NetworkRuleCollectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NetworkRuleCollection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_firewall_network_rule_collection"],
-			TypeName: "azurerm_firewall_network_rule_collection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NetworkRuleCollection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_firewall_network_rule_collection"],
+			TypeName:         "azurerm_firewall_network_rule_collection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NetworkRuleCollection")
 			return err
 		}
@@ -4391,14 +4715,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Policy",
 	}:
 		if err := (&controllersfirewall.PolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Policy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_firewall_policy"],
-			TypeName: "azurerm_firewall_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Policy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_firewall_policy"],
+			TypeName:         "azurerm_firewall_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Policy")
 			return err
 		}
@@ -4408,14 +4733,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "PolicyRuleCollectionGroup",
 	}:
 		if err := (&controllersfirewall.PolicyRuleCollectionGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("PolicyRuleCollectionGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_firewall_policy_rule_collection_group"],
-			TypeName: "azurerm_firewall_policy_rule_collection_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("PolicyRuleCollectionGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_firewall_policy_rule_collection_group"],
+			TypeName:         "azurerm_firewall_policy_rule_collection_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "PolicyRuleCollectionGroup")
 			return err
 		}
@@ -4425,14 +4751,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Frontdoor",
 	}:
 		if err := (&controllersfrontdoor.FrontdoorReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Frontdoor"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_frontdoor"],
-			TypeName: "azurerm_frontdoor",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Frontdoor"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_frontdoor"],
+			TypeName:         "azurerm_frontdoor",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Frontdoor")
 			return err
 		}
@@ -4442,14 +4769,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CustomHTTPSConfiguration",
 	}:
 		if err := (&controllersfrontdoor.CustomHTTPSConfigurationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CustomHTTPSConfiguration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_frontdoor_custom_https_configuration"],
-			TypeName: "azurerm_frontdoor_custom_https_configuration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CustomHTTPSConfiguration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_frontdoor_custom_https_configuration"],
+			TypeName:         "azurerm_frontdoor_custom_https_configuration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CustomHTTPSConfiguration")
 			return err
 		}
@@ -4459,14 +4787,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FirewallPolicy",
 	}:
 		if err := (&controllersfrontdoor.FirewallPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FirewallPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_frontdoor_firewall_policy"],
-			TypeName: "azurerm_frontdoor_firewall_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FirewallPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_frontdoor_firewall_policy"],
+			TypeName:         "azurerm_frontdoor_firewall_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FirewallPolicy")
 			return err
 		}
@@ -4476,14 +4805,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "App",
 	}:
 		if err := (&controllersfunction.AppReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("App"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_function_app"],
-			TypeName: "azurerm_function_app",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("App"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_function_app"],
+			TypeName:         "azurerm_function_app",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "App")
 			return err
 		}
@@ -4493,14 +4823,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AppSlot",
 	}:
 		if err := (&controllersfunction.AppSlotReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AppSlot"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_function_app_slot"],
-			TypeName: "azurerm_function_app_slot",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AppSlot"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_function_app_slot"],
+			TypeName:         "azurerm_function_app_slot",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AppSlot")
 			return err
 		}
@@ -4510,14 +4841,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "HadoopCluster",
 	}:
 		if err := (&controllershdinsight.HadoopClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("HadoopCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hdinsight_hadoop_cluster"],
-			TypeName: "azurerm_hdinsight_hadoop_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("HadoopCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hdinsight_hadoop_cluster"],
+			TypeName:         "azurerm_hdinsight_hadoop_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "HadoopCluster")
 			return err
 		}
@@ -4527,14 +4859,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "HbaseCluster",
 	}:
 		if err := (&controllershdinsight.HbaseClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("HbaseCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hdinsight_hbase_cluster"],
-			TypeName: "azurerm_hdinsight_hbase_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("HbaseCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hdinsight_hbase_cluster"],
+			TypeName:         "azurerm_hdinsight_hbase_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "HbaseCluster")
 			return err
 		}
@@ -4544,14 +4877,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "InteractiveQueryCluster",
 	}:
 		if err := (&controllershdinsight.InteractiveQueryClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("InteractiveQueryCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hdinsight_interactive_query_cluster"],
-			TypeName: "azurerm_hdinsight_interactive_query_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("InteractiveQueryCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hdinsight_interactive_query_cluster"],
+			TypeName:         "azurerm_hdinsight_interactive_query_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "InteractiveQueryCluster")
 			return err
 		}
@@ -4561,14 +4895,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "KafkaCluster",
 	}:
 		if err := (&controllershdinsight.KafkaClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("KafkaCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hdinsight_kafka_cluster"],
-			TypeName: "azurerm_hdinsight_kafka_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("KafkaCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hdinsight_kafka_cluster"],
+			TypeName:         "azurerm_hdinsight_kafka_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "KafkaCluster")
 			return err
 		}
@@ -4578,14 +4913,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MlServicesCluster",
 	}:
 		if err := (&controllershdinsight.MlServicesClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MlServicesCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hdinsight_ml_services_cluster"],
-			TypeName: "azurerm_hdinsight_ml_services_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MlServicesCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hdinsight_ml_services_cluster"],
+			TypeName:         "azurerm_hdinsight_ml_services_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MlServicesCluster")
 			return err
 		}
@@ -4595,14 +4931,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "RserverCluster",
 	}:
 		if err := (&controllershdinsight.RserverClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("RserverCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hdinsight_rserver_cluster"],
-			TypeName: "azurerm_hdinsight_rserver_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("RserverCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hdinsight_rserver_cluster"],
+			TypeName:         "azurerm_hdinsight_rserver_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "RserverCluster")
 			return err
 		}
@@ -4612,14 +4949,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SparkCluster",
 	}:
 		if err := (&controllershdinsight.SparkClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SparkCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hdinsight_spark_cluster"],
-			TypeName: "azurerm_hdinsight_spark_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SparkCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hdinsight_spark_cluster"],
+			TypeName:         "azurerm_hdinsight_spark_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SparkCluster")
 			return err
 		}
@@ -4629,14 +4967,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "StormCluster",
 	}:
 		if err := (&controllershdinsight.StormClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("StormCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hdinsight_storm_cluster"],
-			TypeName: "azurerm_hdinsight_storm_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("StormCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hdinsight_storm_cluster"],
+			TypeName:         "azurerm_hdinsight_storm_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "StormCluster")
 			return err
 		}
@@ -4646,14 +4985,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Healthbot",
 	}:
 		if err := (&controllershealthbot.HealthbotReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Healthbot"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_healthbot"],
-			TypeName: "azurerm_healthbot",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Healthbot"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_healthbot"],
+			TypeName:         "azurerm_healthbot",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Healthbot")
 			return err
 		}
@@ -4663,14 +5003,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Service",
 	}:
 		if err := (&controllershealthcare.ServiceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Service"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_healthcare_service"],
-			TypeName: "azurerm_healthcare_service",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Service"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_healthcare_service"],
+			TypeName:         "azurerm_healthcare_service",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Service")
 			return err
 		}
@@ -4680,14 +5021,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Cache",
 	}:
 		if err := (&controllershpc.CacheReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Cache"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hpc_cache"],
-			TypeName: "azurerm_hpc_cache",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Cache"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hpc_cache"],
+			TypeName:         "azurerm_hpc_cache",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Cache")
 			return err
 		}
@@ -4697,14 +5039,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CacheAccessPolicy",
 	}:
 		if err := (&controllershpc.CacheAccessPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CacheAccessPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hpc_cache_access_policy"],
-			TypeName: "azurerm_hpc_cache_access_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CacheAccessPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hpc_cache_access_policy"],
+			TypeName:         "azurerm_hpc_cache_access_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CacheAccessPolicy")
 			return err
 		}
@@ -4714,14 +5057,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CacheBlobNfsTarget",
 	}:
 		if err := (&controllershpc.CacheBlobNfsTargetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CacheBlobNfsTarget"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hpc_cache_blob_nfs_target"],
-			TypeName: "azurerm_hpc_cache_blob_nfs_target",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CacheBlobNfsTarget"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hpc_cache_blob_nfs_target"],
+			TypeName:         "azurerm_hpc_cache_blob_nfs_target",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CacheBlobNfsTarget")
 			return err
 		}
@@ -4731,14 +5075,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CacheBlobTarget",
 	}:
 		if err := (&controllershpc.CacheBlobTargetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CacheBlobTarget"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hpc_cache_blob_target"],
-			TypeName: "azurerm_hpc_cache_blob_target",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CacheBlobTarget"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hpc_cache_blob_target"],
+			TypeName:         "azurerm_hpc_cache_blob_target",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CacheBlobTarget")
 			return err
 		}
@@ -4748,14 +5093,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CacheNfsTarget",
 	}:
 		if err := (&controllershpc.CacheNfsTargetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CacheNfsTarget"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_hpc_cache_nfs_target"],
-			TypeName: "azurerm_hpc_cache_nfs_target",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CacheNfsTarget"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_hpc_cache_nfs_target"],
+			TypeName:         "azurerm_hpc_cache_nfs_target",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CacheNfsTarget")
 			return err
 		}
@@ -4765,14 +5111,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Image",
 	}:
 		if err := (&controllersimage.ImageReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Image"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_image"],
-			TypeName: "azurerm_image",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Image"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_image"],
+			TypeName:         "azurerm_image",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Image")
 			return err
 		}
@@ -4782,14 +5129,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceEnvironment",
 	}:
 		if err := (&controllersintegration.ServiceEnvironmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceEnvironment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_integration_service_environment"],
-			TypeName: "azurerm_integration_service_environment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceEnvironment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_integration_service_environment"],
+			TypeName:         "azurerm_integration_service_environment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceEnvironment")
 			return err
 		}
@@ -4799,14 +5147,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DeviceGroup",
 	}:
 		if err := (&controllersiotsecurity.DeviceGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DeviceGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iot_security_device_group"],
-			TypeName: "azurerm_iot_security_device_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DeviceGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iot_security_device_group"],
+			TypeName:         "azurerm_iot_security_device_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DeviceGroup")
 			return err
 		}
@@ -4816,14 +5165,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Solution",
 	}:
 		if err := (&controllersiotsecurity.SolutionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Solution"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iot_security_solution"],
-			TypeName: "azurerm_iot_security_solution",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Solution"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iot_security_solution"],
+			TypeName:         "azurerm_iot_security_solution",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Solution")
 			return err
 		}
@@ -4833,14 +5183,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SeriesInsightsAccessPolicy",
 	}:
 		if err := (&controllersiottime.SeriesInsightsAccessPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SeriesInsightsAccessPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iot_time_series_insights_access_policy"],
-			TypeName: "azurerm_iot_time_series_insights_access_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SeriesInsightsAccessPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iot_time_series_insights_access_policy"],
+			TypeName:         "azurerm_iot_time_series_insights_access_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SeriesInsightsAccessPolicy")
 			return err
 		}
@@ -4850,14 +5201,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SeriesInsightsEventSourceIothub",
 	}:
 		if err := (&controllersiottime.SeriesInsightsEventSourceIothubReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SeriesInsightsEventSourceIothub"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iot_time_series_insights_event_source_iothub"],
-			TypeName: "azurerm_iot_time_series_insights_event_source_iothub",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SeriesInsightsEventSourceIothub"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iot_time_series_insights_event_source_iothub"],
+			TypeName:         "azurerm_iot_time_series_insights_event_source_iothub",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SeriesInsightsEventSourceIothub")
 			return err
 		}
@@ -4867,14 +5219,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SeriesInsightsGen2Environment",
 	}:
 		if err := (&controllersiottime.SeriesInsightsGen2EnvironmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SeriesInsightsGen2Environment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iot_time_series_insights_gen2_environment"],
-			TypeName: "azurerm_iot_time_series_insights_gen2_environment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SeriesInsightsGen2Environment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iot_time_series_insights_gen2_environment"],
+			TypeName:         "azurerm_iot_time_series_insights_gen2_environment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SeriesInsightsGen2Environment")
 			return err
 		}
@@ -4884,14 +5237,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SeriesInsightsReferenceDataSet",
 	}:
 		if err := (&controllersiottime.SeriesInsightsReferenceDataSetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SeriesInsightsReferenceDataSet"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iot_time_series_insights_reference_data_set"],
-			TypeName: "azurerm_iot_time_series_insights_reference_data_set",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SeriesInsightsReferenceDataSet"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iot_time_series_insights_reference_data_set"],
+			TypeName:         "azurerm_iot_time_series_insights_reference_data_set",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SeriesInsightsReferenceDataSet")
 			return err
 		}
@@ -4901,14 +5255,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SeriesInsightsStandardEnvironment",
 	}:
 		if err := (&controllersiottime.SeriesInsightsStandardEnvironmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SeriesInsightsStandardEnvironment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iot_time_series_insights_standard_environment"],
-			TypeName: "azurerm_iot_time_series_insights_standard_environment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SeriesInsightsStandardEnvironment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iot_time_series_insights_standard_environment"],
+			TypeName:         "azurerm_iot_time_series_insights_standard_environment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SeriesInsightsStandardEnvironment")
 			return err
 		}
@@ -4918,14 +5273,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Application",
 	}:
 		if err := (&controllersiotcentral.ApplicationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Application"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iotcentral_application"],
-			TypeName: "azurerm_iotcentral_application",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Application"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iotcentral_application"],
+			TypeName:         "azurerm_iotcentral_application",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Application")
 			return err
 		}
@@ -4935,14 +5291,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Iothub",
 	}:
 		if err := (&controllersiothub.IothubReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Iothub"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub"],
-			TypeName: "azurerm_iothub",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Iothub"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub"],
+			TypeName:         "azurerm_iothub",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Iothub")
 			return err
 		}
@@ -4952,14 +5309,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ConsumerGroup",
 	}:
 		if err := (&controllersiothub.ConsumerGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ConsumerGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_consumer_group"],
-			TypeName: "azurerm_iothub_consumer_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ConsumerGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_consumer_group"],
+			TypeName:         "azurerm_iothub_consumer_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ConsumerGroup")
 			return err
 		}
@@ -4969,14 +5327,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Dps",
 	}:
 		if err := (&controllersiothub.DpsReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Dps"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_dps"],
-			TypeName: "azurerm_iothub_dps",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Dps"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_dps"],
+			TypeName:         "azurerm_iothub_dps",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Dps")
 			return err
 		}
@@ -4986,14 +5345,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DpsCertificate",
 	}:
 		if err := (&controllersiothub.DpsCertificateReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DpsCertificate"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_dps_certificate"],
-			TypeName: "azurerm_iothub_dps_certificate",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DpsCertificate"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_dps_certificate"],
+			TypeName:         "azurerm_iothub_dps_certificate",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DpsCertificate")
 			return err
 		}
@@ -5003,14 +5363,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DpsSharedAccessPolicy",
 	}:
 		if err := (&controllersiothub.DpsSharedAccessPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DpsSharedAccessPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_dps_shared_access_policy"],
-			TypeName: "azurerm_iothub_dps_shared_access_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DpsSharedAccessPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_dps_shared_access_policy"],
+			TypeName:         "azurerm_iothub_dps_shared_access_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DpsSharedAccessPolicy")
 			return err
 		}
@@ -5020,14 +5381,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EndpointEventhub",
 	}:
 		if err := (&controllersiothub.EndpointEventhubReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EndpointEventhub"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_endpoint_eventhub"],
-			TypeName: "azurerm_iothub_endpoint_eventhub",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EndpointEventhub"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_endpoint_eventhub"],
+			TypeName:         "azurerm_iothub_endpoint_eventhub",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EndpointEventhub")
 			return err
 		}
@@ -5037,14 +5399,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EndpointServicebusQueue",
 	}:
 		if err := (&controllersiothub.EndpointServicebusQueueReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EndpointServicebusQueue"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_endpoint_servicebus_queue"],
-			TypeName: "azurerm_iothub_endpoint_servicebus_queue",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EndpointServicebusQueue"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_endpoint_servicebus_queue"],
+			TypeName:         "azurerm_iothub_endpoint_servicebus_queue",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EndpointServicebusQueue")
 			return err
 		}
@@ -5054,14 +5417,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EndpointServicebusTopic",
 	}:
 		if err := (&controllersiothub.EndpointServicebusTopicReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EndpointServicebusTopic"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_endpoint_servicebus_topic"],
-			TypeName: "azurerm_iothub_endpoint_servicebus_topic",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EndpointServicebusTopic"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_endpoint_servicebus_topic"],
+			TypeName:         "azurerm_iothub_endpoint_servicebus_topic",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EndpointServicebusTopic")
 			return err
 		}
@@ -5071,14 +5435,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EndpointStorageContainer",
 	}:
 		if err := (&controllersiothub.EndpointStorageContainerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EndpointStorageContainer"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_endpoint_storage_container"],
-			TypeName: "azurerm_iothub_endpoint_storage_container",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EndpointStorageContainer"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_endpoint_storage_container"],
+			TypeName:         "azurerm_iothub_endpoint_storage_container",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EndpointStorageContainer")
 			return err
 		}
@@ -5088,14 +5453,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Enrichment",
 	}:
 		if err := (&controllersiothub.EnrichmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Enrichment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_enrichment"],
-			TypeName: "azurerm_iothub_enrichment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Enrichment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_enrichment"],
+			TypeName:         "azurerm_iothub_enrichment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Enrichment")
 			return err
 		}
@@ -5105,14 +5471,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FallbackRoute",
 	}:
 		if err := (&controllersiothub.FallbackRouteReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FallbackRoute"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_fallback_route"],
-			TypeName: "azurerm_iothub_fallback_route",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FallbackRoute"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_fallback_route"],
+			TypeName:         "azurerm_iothub_fallback_route",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FallbackRoute")
 			return err
 		}
@@ -5122,14 +5489,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Route",
 	}:
 		if err := (&controllersiothub.RouteReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Route"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_route"],
-			TypeName: "azurerm_iothub_route",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Route"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_route"],
+			TypeName:         "azurerm_iothub_route",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Route")
 			return err
 		}
@@ -5139,14 +5507,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SharedAccessPolicy",
 	}:
 		if err := (&controllersiothub.SharedAccessPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SharedAccessPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_iothub_shared_access_policy"],
-			TypeName: "azurerm_iothub_shared_access_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SharedAccessPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_iothub_shared_access_policy"],
+			TypeName:         "azurerm_iothub_shared_access_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SharedAccessPolicy")
 			return err
 		}
@@ -5156,14 +5525,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Group",
 	}:
 		if err := (&controllersip.GroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Group"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_ip_group"],
-			TypeName: "azurerm_ip_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Group"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_ip_group"],
+			TypeName:         "azurerm_ip_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Group")
 			return err
 		}
@@ -5173,14 +5543,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "KeyVault",
 	}:
 		if err := (&controllerskeyvault.KeyVaultReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("KeyVault"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_key_vault"],
-			TypeName: "azurerm_key_vault",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("KeyVault"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_key_vault"],
+			TypeName:         "azurerm_key_vault",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "KeyVault")
 			return err
 		}
@@ -5190,14 +5561,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AccessPolicy",
 	}:
 		if err := (&controllerskeyvault.AccessPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AccessPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_key_vault_access_policy"],
-			TypeName: "azurerm_key_vault_access_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AccessPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_key_vault_access_policy"],
+			TypeName:         "azurerm_key_vault_access_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AccessPolicy")
 			return err
 		}
@@ -5207,14 +5579,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Certificate",
 	}:
 		if err := (&controllerskeyvault.CertificateReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Certificate"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_key_vault_certificate"],
-			TypeName: "azurerm_key_vault_certificate",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Certificate"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_key_vault_certificate"],
+			TypeName:         "azurerm_key_vault_certificate",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Certificate")
 			return err
 		}
@@ -5224,14 +5597,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CertificateIssuer",
 	}:
 		if err := (&controllerskeyvault.CertificateIssuerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CertificateIssuer"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_key_vault_certificate_issuer"],
-			TypeName: "azurerm_key_vault_certificate_issuer",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CertificateIssuer"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_key_vault_certificate_issuer"],
+			TypeName:         "azurerm_key_vault_certificate_issuer",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CertificateIssuer")
 			return err
 		}
@@ -5241,14 +5615,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Key",
 	}:
 		if err := (&controllerskeyvault.KeyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Key"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_key_vault_key"],
-			TypeName: "azurerm_key_vault_key",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Key"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_key_vault_key"],
+			TypeName:         "azurerm_key_vault_key",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Key")
 			return err
 		}
@@ -5258,14 +5633,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ManagedHardwareSecurityModule",
 	}:
 		if err := (&controllerskeyvault.ManagedHardwareSecurityModuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ManagedHardwareSecurityModule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_key_vault_managed_hardware_security_module"],
-			TypeName: "azurerm_key_vault_managed_hardware_security_module",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ManagedHardwareSecurityModule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_key_vault_managed_hardware_security_module"],
+			TypeName:         "azurerm_key_vault_managed_hardware_security_module",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ManagedHardwareSecurityModule")
 			return err
 		}
@@ -5275,14 +5651,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Secret",
 	}:
 		if err := (&controllerskeyvault.SecretReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Secret"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_key_vault_secret"],
-			TypeName: "azurerm_key_vault_secret",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Secret"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_key_vault_secret"],
+			TypeName:         "azurerm_key_vault_secret",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Secret")
 			return err
 		}
@@ -5292,14 +5669,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "KubernetesCluster",
 	}:
 		if err := (&controllerskubernetescluster.KubernetesClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("KubernetesCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kubernetes_cluster"],
-			TypeName: "azurerm_kubernetes_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("KubernetesCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kubernetes_cluster"],
+			TypeName:         "azurerm_kubernetes_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "KubernetesCluster")
 			return err
 		}
@@ -5309,14 +5687,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NodePool",
 	}:
 		if err := (&controllerskubernetescluster.NodePoolReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NodePool"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kubernetes_cluster_node_pool"],
-			TypeName: "azurerm_kubernetes_cluster_node_pool",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NodePool"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kubernetes_cluster_node_pool"],
+			TypeName:         "azurerm_kubernetes_cluster_node_pool",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NodePool")
 			return err
 		}
@@ -5326,14 +5705,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AttachedDatabaseConfiguration",
 	}:
 		if err := (&controllerskusto.AttachedDatabaseConfigurationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AttachedDatabaseConfiguration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kusto_attached_database_configuration"],
-			TypeName: "azurerm_kusto_attached_database_configuration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AttachedDatabaseConfiguration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kusto_attached_database_configuration"],
+			TypeName:         "azurerm_kusto_attached_database_configuration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AttachedDatabaseConfiguration")
 			return err
 		}
@@ -5343,14 +5723,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Cluster",
 	}:
 		if err := (&controllerskusto.ClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Cluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kusto_cluster"],
-			TypeName: "azurerm_kusto_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Cluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kusto_cluster"],
+			TypeName:         "azurerm_kusto_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Cluster")
 			return err
 		}
@@ -5360,14 +5741,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ClusterCustomerManagedKey",
 	}:
 		if err := (&controllerskusto.ClusterCustomerManagedKeyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ClusterCustomerManagedKey"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kusto_cluster_customer_managed_key"],
-			TypeName: "azurerm_kusto_cluster_customer_managed_key",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ClusterCustomerManagedKey"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kusto_cluster_customer_managed_key"],
+			TypeName:         "azurerm_kusto_cluster_customer_managed_key",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ClusterCustomerManagedKey")
 			return err
 		}
@@ -5377,14 +5759,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ClusterPrincipalAssignment",
 	}:
 		if err := (&controllerskusto.ClusterPrincipalAssignmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ClusterPrincipalAssignment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kusto_cluster_principal_assignment"],
-			TypeName: "azurerm_kusto_cluster_principal_assignment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ClusterPrincipalAssignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kusto_cluster_principal_assignment"],
+			TypeName:         "azurerm_kusto_cluster_principal_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ClusterPrincipalAssignment")
 			return err
 		}
@@ -5394,14 +5777,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Database",
 	}:
 		if err := (&controllerskusto.DatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Database"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kusto_database"],
-			TypeName: "azurerm_kusto_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Database"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kusto_database"],
+			TypeName:         "azurerm_kusto_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Database")
 			return err
 		}
@@ -5411,14 +5795,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DatabasePrincipal",
 	}:
 		if err := (&controllerskusto.DatabasePrincipalReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DatabasePrincipal"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kusto_database_principal"],
-			TypeName: "azurerm_kusto_database_principal",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DatabasePrincipal"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kusto_database_principal"],
+			TypeName:         "azurerm_kusto_database_principal",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DatabasePrincipal")
 			return err
 		}
@@ -5428,14 +5813,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DatabasePrincipalAssignment",
 	}:
 		if err := (&controllerskusto.DatabasePrincipalAssignmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DatabasePrincipalAssignment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kusto_database_principal_assignment"],
-			TypeName: "azurerm_kusto_database_principal_assignment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DatabasePrincipalAssignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kusto_database_principal_assignment"],
+			TypeName:         "azurerm_kusto_database_principal_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DatabasePrincipalAssignment")
 			return err
 		}
@@ -5445,14 +5831,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EventgridDataConnection",
 	}:
 		if err := (&controllerskusto.EventgridDataConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EventgridDataConnection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kusto_eventgrid_data_connection"],
-			TypeName: "azurerm_kusto_eventgrid_data_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EventgridDataConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kusto_eventgrid_data_connection"],
+			TypeName:         "azurerm_kusto_eventgrid_data_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EventgridDataConnection")
 			return err
 		}
@@ -5462,14 +5849,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EventhubDataConnection",
 	}:
 		if err := (&controllerskusto.EventhubDataConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EventhubDataConnection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kusto_eventhub_data_connection"],
-			TypeName: "azurerm_kusto_eventhub_data_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EventhubDataConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kusto_eventhub_data_connection"],
+			TypeName:         "azurerm_kusto_eventhub_data_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EventhubDataConnection")
 			return err
 		}
@@ -5479,14 +5867,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "IothubDataConnection",
 	}:
 		if err := (&controllerskusto.IothubDataConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("IothubDataConnection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_kusto_iothub_data_connection"],
-			TypeName: "azurerm_kusto_iothub_data_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("IothubDataConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_kusto_iothub_data_connection"],
+			TypeName:         "azurerm_kusto_iothub_data_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "IothubDataConnection")
 			return err
 		}
@@ -5496,14 +5885,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Lb",
 	}:
 		if err := (&controllerslb.LbReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Lb"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_lb"],
-			TypeName: "azurerm_lb",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Lb"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_lb"],
+			TypeName:         "azurerm_lb",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Lb")
 			return err
 		}
@@ -5513,14 +5903,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "BackendAddressPool",
 	}:
 		if err := (&controllerslb.BackendAddressPoolReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("BackendAddressPool"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_lb_backend_address_pool"],
-			TypeName: "azurerm_lb_backend_address_pool",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("BackendAddressPool"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_lb_backend_address_pool"],
+			TypeName:         "azurerm_lb_backend_address_pool",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "BackendAddressPool")
 			return err
 		}
@@ -5530,14 +5921,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "BackendAddressPoolAddress",
 	}:
 		if err := (&controllerslb.BackendAddressPoolAddressReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("BackendAddressPoolAddress"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_lb_backend_address_pool_address"],
-			TypeName: "azurerm_lb_backend_address_pool_address",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("BackendAddressPoolAddress"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_lb_backend_address_pool_address"],
+			TypeName:         "azurerm_lb_backend_address_pool_address",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "BackendAddressPoolAddress")
 			return err
 		}
@@ -5547,14 +5939,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NatPool",
 	}:
 		if err := (&controllerslb.NatPoolReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NatPool"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_lb_nat_pool"],
-			TypeName: "azurerm_lb_nat_pool",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NatPool"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_lb_nat_pool"],
+			TypeName:         "azurerm_lb_nat_pool",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NatPool")
 			return err
 		}
@@ -5564,14 +5957,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NatRule",
 	}:
 		if err := (&controllerslb.NatRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NatRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_lb_nat_rule"],
-			TypeName: "azurerm_lb_nat_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NatRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_lb_nat_rule"],
+			TypeName:         "azurerm_lb_nat_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NatRule")
 			return err
 		}
@@ -5581,14 +5975,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "OutboundRule",
 	}:
 		if err := (&controllerslb.OutboundRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("OutboundRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_lb_outbound_rule"],
-			TypeName: "azurerm_lb_outbound_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("OutboundRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_lb_outbound_rule"],
+			TypeName:         "azurerm_lb_outbound_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "OutboundRule")
 			return err
 		}
@@ -5598,14 +5993,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Probe",
 	}:
 		if err := (&controllerslb.ProbeReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Probe"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_lb_probe"],
-			TypeName: "azurerm_lb_probe",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Probe"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_lb_probe"],
+			TypeName:         "azurerm_lb_probe",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Probe")
 			return err
 		}
@@ -5615,14 +6011,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Rule",
 	}:
 		if err := (&controllerslb.RuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Rule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_lb_rule"],
-			TypeName: "azurerm_lb_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Rule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_lb_rule"],
+			TypeName:         "azurerm_lb_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Rule")
 			return err
 		}
@@ -5632,14 +6029,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Assignment",
 	}:
 		if err := (&controllerslighthouse.AssignmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Assignment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_lighthouse_assignment"],
-			TypeName: "azurerm_lighthouse_assignment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Assignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_lighthouse_assignment"],
+			TypeName:         "azurerm_lighthouse_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Assignment")
 			return err
 		}
@@ -5649,14 +6047,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Definition",
 	}:
 		if err := (&controllerslighthouse.DefinitionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Definition"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_lighthouse_definition"],
-			TypeName: "azurerm_lighthouse_definition",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Definition"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_lighthouse_definition"],
+			TypeName:         "azurerm_lighthouse_definition",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Definition")
 			return err
 		}
@@ -5666,14 +6065,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualMachine",
 	}:
 		if err := (&controllerslinux.VirtualMachineReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualMachine"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_linux_virtual_machine"],
-			TypeName: "azurerm_linux_virtual_machine",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualMachine"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_linux_virtual_machine"],
+			TypeName:         "azurerm_linux_virtual_machine",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualMachine")
 			return err
 		}
@@ -5683,14 +6083,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualMachineScaleSet",
 	}:
 		if err := (&controllerslinux.VirtualMachineScaleSetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualMachineScaleSet"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_linux_virtual_machine_scale_set"],
-			TypeName: "azurerm_linux_virtual_machine_scale_set",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualMachineScaleSet"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_linux_virtual_machine_scale_set"],
+			TypeName:         "azurerm_linux_virtual_machine_scale_set",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualMachineScaleSet")
 			return err
 		}
@@ -5700,14 +6101,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NetworkGateway",
 	}:
 		if err := (&controllerslocal.NetworkGatewayReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NetworkGateway"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_local_network_gateway"],
-			TypeName: "azurerm_local_network_gateway",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NetworkGateway"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_local_network_gateway"],
+			TypeName:         "azurerm_local_network_gateway",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NetworkGateway")
 			return err
 		}
@@ -5717,14 +6119,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Cluster",
 	}:
 		if err := (&controllersloganalytics.ClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Cluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_log_analytics_cluster"],
-			TypeName: "azurerm_log_analytics_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Cluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_log_analytics_cluster"],
+			TypeName:         "azurerm_log_analytics_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Cluster")
 			return err
 		}
@@ -5734,14 +6137,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ClusterCustomerManagedKey",
 	}:
 		if err := (&controllersloganalytics.ClusterCustomerManagedKeyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ClusterCustomerManagedKey"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_log_analytics_cluster_customer_managed_key"],
-			TypeName: "azurerm_log_analytics_cluster_customer_managed_key",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ClusterCustomerManagedKey"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_log_analytics_cluster_customer_managed_key"],
+			TypeName:         "azurerm_log_analytics_cluster_customer_managed_key",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ClusterCustomerManagedKey")
 			return err
 		}
@@ -5751,14 +6155,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DataExportRule",
 	}:
 		if err := (&controllersloganalytics.DataExportRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DataExportRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_log_analytics_data_export_rule"],
-			TypeName: "azurerm_log_analytics_data_export_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DataExportRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_log_analytics_data_export_rule"],
+			TypeName:         "azurerm_log_analytics_data_export_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataExportRule")
 			return err
 		}
@@ -5768,14 +6173,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DatasourceWindowsEvent",
 	}:
 		if err := (&controllersloganalytics.DatasourceWindowsEventReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DatasourceWindowsEvent"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_log_analytics_datasource_windows_event"],
-			TypeName: "azurerm_log_analytics_datasource_windows_event",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DatasourceWindowsEvent"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_log_analytics_datasource_windows_event"],
+			TypeName:         "azurerm_log_analytics_datasource_windows_event",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DatasourceWindowsEvent")
 			return err
 		}
@@ -5785,14 +6191,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DatasourceWindowsPerformanceCounter",
 	}:
 		if err := (&controllersloganalytics.DatasourceWindowsPerformanceCounterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DatasourceWindowsPerformanceCounter"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_log_analytics_datasource_windows_performance_counter"],
-			TypeName: "azurerm_log_analytics_datasource_windows_performance_counter",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DatasourceWindowsPerformanceCounter"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_log_analytics_datasource_windows_performance_counter"],
+			TypeName:         "azurerm_log_analytics_datasource_windows_performance_counter",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DatasourceWindowsPerformanceCounter")
 			return err
 		}
@@ -5802,14 +6209,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LinkedService",
 	}:
 		if err := (&controllersloganalytics.LinkedServiceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LinkedService"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_log_analytics_linked_service"],
-			TypeName: "azurerm_log_analytics_linked_service",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LinkedService"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_log_analytics_linked_service"],
+			TypeName:         "azurerm_log_analytics_linked_service",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LinkedService")
 			return err
 		}
@@ -5819,14 +6227,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LinkedStorageAccount",
 	}:
 		if err := (&controllersloganalytics.LinkedStorageAccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LinkedStorageAccount"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_log_analytics_linked_storage_account"],
-			TypeName: "azurerm_log_analytics_linked_storage_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LinkedStorageAccount"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_log_analytics_linked_storage_account"],
+			TypeName:         "azurerm_log_analytics_linked_storage_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LinkedStorageAccount")
 			return err
 		}
@@ -5836,14 +6245,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SavedSearch",
 	}:
 		if err := (&controllersloganalytics.SavedSearchReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SavedSearch"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_log_analytics_saved_search"],
-			TypeName: "azurerm_log_analytics_saved_search",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SavedSearch"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_log_analytics_saved_search"],
+			TypeName:         "azurerm_log_analytics_saved_search",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SavedSearch")
 			return err
 		}
@@ -5853,14 +6263,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Solution",
 	}:
 		if err := (&controllersloganalytics.SolutionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Solution"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_log_analytics_solution"],
-			TypeName: "azurerm_log_analytics_solution",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Solution"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_log_analytics_solution"],
+			TypeName:         "azurerm_log_analytics_solution",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Solution")
 			return err
 		}
@@ -5870,14 +6281,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "StorageInsights",
 	}:
 		if err := (&controllersloganalytics.StorageInsightsReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("StorageInsights"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_log_analytics_storage_insights"],
-			TypeName: "azurerm_log_analytics_storage_insights",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("StorageInsights"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_log_analytics_storage_insights"],
+			TypeName:         "azurerm_log_analytics_storage_insights",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "StorageInsights")
 			return err
 		}
@@ -5887,14 +6299,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Workspace",
 	}:
 		if err := (&controllersloganalytics.WorkspaceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Workspace"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_log_analytics_workspace"],
-			TypeName: "azurerm_log_analytics_workspace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Workspace"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_log_analytics_workspace"],
+			TypeName:         "azurerm_log_analytics_workspace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Workspace")
 			return err
 		}
@@ -5904,14 +6317,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ActionCustom",
 	}:
 		if err := (&controllerslogicapp.ActionCustomReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ActionCustom"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_logic_app_action_custom"],
-			TypeName: "azurerm_logic_app_action_custom",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ActionCustom"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_logic_app_action_custom"],
+			TypeName:         "azurerm_logic_app_action_custom",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ActionCustom")
 			return err
 		}
@@ -5921,14 +6335,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ActionHTTP",
 	}:
 		if err := (&controllerslogicapp.ActionHTTPReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ActionHTTP"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_logic_app_action_http"],
-			TypeName: "azurerm_logic_app_action_http",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ActionHTTP"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_logic_app_action_http"],
+			TypeName:         "azurerm_logic_app_action_http",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ActionHTTP")
 			return err
 		}
@@ -5938,14 +6353,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "IntegrationAccount",
 	}:
 		if err := (&controllerslogicapp.IntegrationAccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("IntegrationAccount"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_logic_app_integration_account"],
-			TypeName: "azurerm_logic_app_integration_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("IntegrationAccount"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_logic_app_integration_account"],
+			TypeName:         "azurerm_logic_app_integration_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "IntegrationAccount")
 			return err
 		}
@@ -5955,14 +6371,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TriggerCustom",
 	}:
 		if err := (&controllerslogicapp.TriggerCustomReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TriggerCustom"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_logic_app_trigger_custom"],
-			TypeName: "azurerm_logic_app_trigger_custom",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TriggerCustom"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_logic_app_trigger_custom"],
+			TypeName:         "azurerm_logic_app_trigger_custom",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TriggerCustom")
 			return err
 		}
@@ -5972,14 +6389,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TriggerHTTPRequest",
 	}:
 		if err := (&controllerslogicapp.TriggerHTTPRequestReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TriggerHTTPRequest"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_logic_app_trigger_http_request"],
-			TypeName: "azurerm_logic_app_trigger_http_request",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TriggerHTTPRequest"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_logic_app_trigger_http_request"],
+			TypeName:         "azurerm_logic_app_trigger_http_request",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TriggerHTTPRequest")
 			return err
 		}
@@ -5989,14 +6407,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TriggerRecurrence",
 	}:
 		if err := (&controllerslogicapp.TriggerRecurrenceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TriggerRecurrence"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_logic_app_trigger_recurrence"],
-			TypeName: "azurerm_logic_app_trigger_recurrence",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TriggerRecurrence"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_logic_app_trigger_recurrence"],
+			TypeName:         "azurerm_logic_app_trigger_recurrence",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TriggerRecurrence")
 			return err
 		}
@@ -6006,14 +6425,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Workflow",
 	}:
 		if err := (&controllerslogicapp.WorkflowReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Workflow"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_logic_app_workflow"],
-			TypeName: "azurerm_logic_app_workflow",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Workflow"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_logic_app_workflow"],
+			TypeName:         "azurerm_logic_app_workflow",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Workflow")
 			return err
 		}
@@ -6023,14 +6443,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LearningComputeCluster",
 	}:
 		if err := (&controllersmachine.LearningComputeClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LearningComputeCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_machine_learning_compute_cluster"],
-			TypeName: "azurerm_machine_learning_compute_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LearningComputeCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_machine_learning_compute_cluster"],
+			TypeName:         "azurerm_machine_learning_compute_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LearningComputeCluster")
 			return err
 		}
@@ -6040,14 +6461,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LearningInferenceCluster",
 	}:
 		if err := (&controllersmachine.LearningInferenceClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LearningInferenceCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_machine_learning_inference_cluster"],
-			TypeName: "azurerm_machine_learning_inference_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LearningInferenceCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_machine_learning_inference_cluster"],
+			TypeName:         "azurerm_machine_learning_inference_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LearningInferenceCluster")
 			return err
 		}
@@ -6057,14 +6479,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LearningWorkspace",
 	}:
 		if err := (&controllersmachine.LearningWorkspaceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LearningWorkspace"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_machine_learning_workspace"],
-			TypeName: "azurerm_machine_learning_workspace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LearningWorkspace"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_machine_learning_workspace"],
+			TypeName:         "azurerm_machine_learning_workspace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LearningWorkspace")
 			return err
 		}
@@ -6074,14 +6497,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AssignmentDedicatedHost",
 	}:
 		if err := (&controllersmaintenance.AssignmentDedicatedHostReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AssignmentDedicatedHost"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_maintenance_assignment_dedicated_host"],
-			TypeName: "azurerm_maintenance_assignment_dedicated_host",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AssignmentDedicatedHost"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_maintenance_assignment_dedicated_host"],
+			TypeName:         "azurerm_maintenance_assignment_dedicated_host",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AssignmentDedicatedHost")
 			return err
 		}
@@ -6091,14 +6515,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AssignmentVirtualMachine",
 	}:
 		if err := (&controllersmaintenance.AssignmentVirtualMachineReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AssignmentVirtualMachine"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_maintenance_assignment_virtual_machine"],
-			TypeName: "azurerm_maintenance_assignment_virtual_machine",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AssignmentVirtualMachine"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_maintenance_assignment_virtual_machine"],
+			TypeName:         "azurerm_maintenance_assignment_virtual_machine",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AssignmentVirtualMachine")
 			return err
 		}
@@ -6108,14 +6533,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Configuration",
 	}:
 		if err := (&controllersmaintenance.ConfigurationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Configuration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_maintenance_configuration"],
-			TypeName: "azurerm_maintenance_configuration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Configuration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_maintenance_configuration"],
+			TypeName:         "azurerm_maintenance_configuration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Configuration")
 			return err
 		}
@@ -6125,14 +6551,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Application",
 	}:
 		if err := (&controllersmanaged.ApplicationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Application"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_managed_application"],
-			TypeName: "azurerm_managed_application",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Application"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_managed_application"],
+			TypeName:         "azurerm_managed_application",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Application")
 			return err
 		}
@@ -6142,14 +6569,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ApplicationDefinition",
 	}:
 		if err := (&controllersmanaged.ApplicationDefinitionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ApplicationDefinition"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_managed_application_definition"],
-			TypeName: "azurerm_managed_application_definition",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ApplicationDefinition"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_managed_application_definition"],
+			TypeName:         "azurerm_managed_application_definition",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ApplicationDefinition")
 			return err
 		}
@@ -6159,14 +6587,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Disk",
 	}:
 		if err := (&controllersmanaged.DiskReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Disk"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_managed_disk"],
-			TypeName: "azurerm_managed_disk",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Disk"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_managed_disk"],
+			TypeName:         "azurerm_managed_disk",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Disk")
 			return err
 		}
@@ -6176,15 +6605,34 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Group",
 	}:
 		if err := (&controllersmanagement.GroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Group"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_management_group"],
-			TypeName: "azurerm_management_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Group"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_management_group"],
+			TypeName:         "azurerm_management_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Group")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "management.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "GroupPolicyAssignment",
+	}:
+		if err := (&controllersmanagement.GroupPolicyAssignmentReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GroupPolicyAssignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_management_group_policy_assignment"],
+			TypeName:         "azurerm_management_group_policy_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "GroupPolicyAssignment")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -6193,14 +6641,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "GroupSubscriptionAssociation",
 	}:
 		if err := (&controllersmanagement.GroupSubscriptionAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("GroupSubscriptionAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_management_group_subscription_association"],
-			TypeName: "azurerm_management_group_subscription_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GroupSubscriptionAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_management_group_subscription_association"],
+			TypeName:         "azurerm_management_group_subscription_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "GroupSubscriptionAssociation")
 			return err
 		}
@@ -6210,14 +6659,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "GroupTemplateDeployment",
 	}:
 		if err := (&controllersmanagement.GroupTemplateDeploymentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("GroupTemplateDeployment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_management_group_template_deployment"],
-			TypeName: "azurerm_management_group_template_deployment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GroupTemplateDeployment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_management_group_template_deployment"],
+			TypeName:         "azurerm_management_group_template_deployment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "GroupTemplateDeployment")
 			return err
 		}
@@ -6227,14 +6677,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Lock",
 	}:
 		if err := (&controllersmanagement.LockReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Lock"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_management_lock"],
-			TypeName: "azurerm_management_lock",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Lock"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_management_lock"],
+			TypeName:         "azurerm_management_lock",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Lock")
 			return err
 		}
@@ -6244,14 +6695,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Account",
 	}:
 		if err := (&controllersmaps.AccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Account"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_maps_account"],
-			TypeName: "azurerm_maps_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Account"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_maps_account"],
+			TypeName:         "azurerm_maps_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Account")
 			return err
 		}
@@ -6261,14 +6713,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Configuration",
 	}:
 		if err := (&controllersmariadb.ConfigurationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Configuration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mariadb_configuration"],
-			TypeName: "azurerm_mariadb_configuration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Configuration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mariadb_configuration"],
+			TypeName:         "azurerm_mariadb_configuration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Configuration")
 			return err
 		}
@@ -6278,14 +6731,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Database",
 	}:
 		if err := (&controllersmariadb.DatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Database"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mariadb_database"],
-			TypeName: "azurerm_mariadb_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Database"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mariadb_database"],
+			TypeName:         "azurerm_mariadb_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Database")
 			return err
 		}
@@ -6295,14 +6749,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FirewallRule",
 	}:
 		if err := (&controllersmariadb.FirewallRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FirewallRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mariadb_firewall_rule"],
-			TypeName: "azurerm_mariadb_firewall_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FirewallRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mariadb_firewall_rule"],
+			TypeName:         "azurerm_mariadb_firewall_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FirewallRule")
 			return err
 		}
@@ -6312,14 +6767,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Server",
 	}:
 		if err := (&controllersmariadb.ServerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Server"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mariadb_server"],
-			TypeName: "azurerm_mariadb_server",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Server"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mariadb_server"],
+			TypeName:         "azurerm_mariadb_server",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Server")
 			return err
 		}
@@ -6329,14 +6785,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualNetworkRule",
 	}:
 		if err := (&controllersmariadb.VirtualNetworkRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualNetworkRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mariadb_virtual_network_rule"],
-			TypeName: "azurerm_mariadb_virtual_network_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualNetworkRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mariadb_virtual_network_rule"],
+			TypeName:         "azurerm_mariadb_virtual_network_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualNetworkRule")
 			return err
 		}
@@ -6346,14 +6803,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Agreement",
 	}:
 		if err := (&controllersmarketplace.AgreementReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Agreement"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_marketplace_agreement"],
-			TypeName: "azurerm_marketplace_agreement",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Agreement"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_marketplace_agreement"],
+			TypeName:         "azurerm_marketplace_agreement",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Agreement")
 			return err
 		}
@@ -6363,14 +6821,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Asset",
 	}:
 		if err := (&controllersmedia.AssetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Asset"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_media_asset"],
-			TypeName: "azurerm_media_asset",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Asset"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_media_asset"],
+			TypeName:         "azurerm_media_asset",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Asset")
 			return err
 		}
@@ -6380,14 +6839,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AssetFilter",
 	}:
 		if err := (&controllersmedia.AssetFilterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AssetFilter"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_media_asset_filter"],
-			TypeName: "azurerm_media_asset_filter",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AssetFilter"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_media_asset_filter"],
+			TypeName:         "azurerm_media_asset_filter",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AssetFilter")
 			return err
 		}
@@ -6397,14 +6857,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ContentKeyPolicy",
 	}:
 		if err := (&controllersmedia.ContentKeyPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ContentKeyPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_media_content_key_policy"],
-			TypeName: "azurerm_media_content_key_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ContentKeyPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_media_content_key_policy"],
+			TypeName:         "azurerm_media_content_key_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ContentKeyPolicy")
 			return err
 		}
@@ -6414,14 +6875,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Job",
 	}:
 		if err := (&controllersmedia.JobReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Job"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_media_job"],
-			TypeName: "azurerm_media_job",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Job"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_media_job"],
+			TypeName:         "azurerm_media_job",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Job")
 			return err
 		}
@@ -6431,14 +6893,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LiveEvent",
 	}:
 		if err := (&controllersmedia.LiveEventReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LiveEvent"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_media_live_event"],
-			TypeName: "azurerm_media_live_event",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LiveEvent"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_media_live_event"],
+			TypeName:         "azurerm_media_live_event",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LiveEvent")
 			return err
 		}
@@ -6448,14 +6911,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LiveEventOutput",
 	}:
 		if err := (&controllersmedia.LiveEventOutputReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LiveEventOutput"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_media_live_event_output"],
-			TypeName: "azurerm_media_live_event_output",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LiveEventOutput"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_media_live_event_output"],
+			TypeName:         "azurerm_media_live_event_output",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LiveEventOutput")
 			return err
 		}
@@ -6465,14 +6929,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServicesAccount",
 	}:
 		if err := (&controllersmedia.ServicesAccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServicesAccount"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_media_services_account"],
-			TypeName: "azurerm_media_services_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServicesAccount"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_media_services_account"],
+			TypeName:         "azurerm_media_services_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServicesAccount")
 			return err
 		}
@@ -6482,14 +6947,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "StreamingEndpoint",
 	}:
 		if err := (&controllersmedia.StreamingEndpointReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("StreamingEndpoint"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_media_streaming_endpoint"],
-			TypeName: "azurerm_media_streaming_endpoint",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("StreamingEndpoint"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_media_streaming_endpoint"],
+			TypeName:         "azurerm_media_streaming_endpoint",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "StreamingEndpoint")
 			return err
 		}
@@ -6499,14 +6965,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "StreamingLocator",
 	}:
 		if err := (&controllersmedia.StreamingLocatorReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("StreamingLocator"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_media_streaming_locator"],
-			TypeName: "azurerm_media_streaming_locator",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("StreamingLocator"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_media_streaming_locator"],
+			TypeName:         "azurerm_media_streaming_locator",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "StreamingLocator")
 			return err
 		}
@@ -6516,14 +6983,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "StreamingPolicy",
 	}:
 		if err := (&controllersmedia.StreamingPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("StreamingPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_media_streaming_policy"],
-			TypeName: "azurerm_media_streaming_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("StreamingPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_media_streaming_policy"],
+			TypeName:         "azurerm_media_streaming_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "StreamingPolicy")
 			return err
 		}
@@ -6533,14 +7001,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Transform",
 	}:
 		if err := (&controllersmedia.TransformReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Transform"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_media_transform"],
-			TypeName: "azurerm_media_transform",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Transform"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_media_transform"],
+			TypeName:         "azurerm_media_transform",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Transform")
 			return err
 		}
@@ -6550,14 +7019,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AadDiagnosticSetting",
 	}:
 		if err := (&controllersmonitor.AadDiagnosticSettingReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AadDiagnosticSetting"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_aad_diagnostic_setting"],
-			TypeName: "azurerm_monitor_aad_diagnostic_setting",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AadDiagnosticSetting"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_aad_diagnostic_setting"],
+			TypeName:         "azurerm_monitor_aad_diagnostic_setting",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AadDiagnosticSetting")
 			return err
 		}
@@ -6567,14 +7037,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ActionGroup",
 	}:
 		if err := (&controllersmonitor.ActionGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ActionGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_action_group"],
-			TypeName: "azurerm_monitor_action_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ActionGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_action_group"],
+			TypeName:         "azurerm_monitor_action_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ActionGroup")
 			return err
 		}
@@ -6584,14 +7055,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ActionRuleActionGroup",
 	}:
 		if err := (&controllersmonitor.ActionRuleActionGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ActionRuleActionGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_action_rule_action_group"],
-			TypeName: "azurerm_monitor_action_rule_action_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ActionRuleActionGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_action_rule_action_group"],
+			TypeName:         "azurerm_monitor_action_rule_action_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ActionRuleActionGroup")
 			return err
 		}
@@ -6601,14 +7073,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ActionRuleSuppression",
 	}:
 		if err := (&controllersmonitor.ActionRuleSuppressionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ActionRuleSuppression"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_action_rule_suppression"],
-			TypeName: "azurerm_monitor_action_rule_suppression",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ActionRuleSuppression"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_action_rule_suppression"],
+			TypeName:         "azurerm_monitor_action_rule_suppression",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ActionRuleSuppression")
 			return err
 		}
@@ -6618,14 +7091,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ActivityLogAlert",
 	}:
 		if err := (&controllersmonitor.ActivityLogAlertReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ActivityLogAlert"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_activity_log_alert"],
-			TypeName: "azurerm_monitor_activity_log_alert",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ActivityLogAlert"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_activity_log_alert"],
+			TypeName:         "azurerm_monitor_activity_log_alert",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ActivityLogAlert")
 			return err
 		}
@@ -6635,14 +7109,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AutoscaleSetting",
 	}:
 		if err := (&controllersmonitor.AutoscaleSettingReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AutoscaleSetting"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_autoscale_setting"],
-			TypeName: "azurerm_monitor_autoscale_setting",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AutoscaleSetting"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_autoscale_setting"],
+			TypeName:         "azurerm_monitor_autoscale_setting",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AutoscaleSetting")
 			return err
 		}
@@ -6652,14 +7127,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DiagnosticSetting",
 	}:
 		if err := (&controllersmonitor.DiagnosticSettingReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DiagnosticSetting"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_diagnostic_setting"],
-			TypeName: "azurerm_monitor_diagnostic_setting",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DiagnosticSetting"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_diagnostic_setting"],
+			TypeName:         "azurerm_monitor_diagnostic_setting",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DiagnosticSetting")
 			return err
 		}
@@ -6669,14 +7145,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LogProfile",
 	}:
 		if err := (&controllersmonitor.LogProfileReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LogProfile"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_log_profile"],
-			TypeName: "azurerm_monitor_log_profile",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LogProfile"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_log_profile"],
+			TypeName:         "azurerm_monitor_log_profile",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LogProfile")
 			return err
 		}
@@ -6686,14 +7163,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MetricAlert",
 	}:
 		if err := (&controllersmonitor.MetricAlertReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MetricAlert"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_metric_alert"],
-			TypeName: "azurerm_monitor_metric_alert",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MetricAlert"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_metric_alert"],
+			TypeName:         "azurerm_monitor_metric_alert",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MetricAlert")
 			return err
 		}
@@ -6703,14 +7181,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ScheduledQueryRulesAlert",
 	}:
 		if err := (&controllersmonitor.ScheduledQueryRulesAlertReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ScheduledQueryRulesAlert"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_scheduled_query_rules_alert"],
-			TypeName: "azurerm_monitor_scheduled_query_rules_alert",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ScheduledQueryRulesAlert"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_scheduled_query_rules_alert"],
+			TypeName:         "azurerm_monitor_scheduled_query_rules_alert",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ScheduledQueryRulesAlert")
 			return err
 		}
@@ -6720,14 +7199,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ScheduledQueryRulesLog",
 	}:
 		if err := (&controllersmonitor.ScheduledQueryRulesLogReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ScheduledQueryRulesLog"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_scheduled_query_rules_log"],
-			TypeName: "azurerm_monitor_scheduled_query_rules_log",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ScheduledQueryRulesLog"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_scheduled_query_rules_log"],
+			TypeName:         "azurerm_monitor_scheduled_query_rules_log",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ScheduledQueryRulesLog")
 			return err
 		}
@@ -6737,14 +7217,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SmartDetectorAlertRule",
 	}:
 		if err := (&controllersmonitor.SmartDetectorAlertRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SmartDetectorAlertRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_monitor_smart_detector_alert_rule"],
-			TypeName: "azurerm_monitor_smart_detector_alert_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SmartDetectorAlertRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_monitor_smart_detector_alert_rule"],
+			TypeName:         "azurerm_monitor_smart_detector_alert_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SmartDetectorAlertRule")
 			return err
 		}
@@ -6754,14 +7235,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Database",
 	}:
 		if err := (&controllersmssql.DatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Database"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_database"],
-			TypeName: "azurerm_mssql_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Database"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_database"],
+			TypeName:         "azurerm_mssql_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Database")
 			return err
 		}
@@ -6771,14 +7253,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DatabaseExtendedAuditingPolicy",
 	}:
 		if err := (&controllersmssql.DatabaseExtendedAuditingPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DatabaseExtendedAuditingPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_database_extended_auditing_policy"],
-			TypeName: "azurerm_mssql_database_extended_auditing_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DatabaseExtendedAuditingPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_database_extended_auditing_policy"],
+			TypeName:         "azurerm_mssql_database_extended_auditing_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DatabaseExtendedAuditingPolicy")
 			return err
 		}
@@ -6788,14 +7271,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DatabaseVulnerabilityAssessmentRuleBaseline",
 	}:
 		if err := (&controllersmssql.DatabaseVulnerabilityAssessmentRuleBaselineReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DatabaseVulnerabilityAssessmentRuleBaseline"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_database_vulnerability_assessment_rule_baseline"],
-			TypeName: "azurerm_mssql_database_vulnerability_assessment_rule_baseline",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DatabaseVulnerabilityAssessmentRuleBaseline"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_database_vulnerability_assessment_rule_baseline"],
+			TypeName:         "azurerm_mssql_database_vulnerability_assessment_rule_baseline",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DatabaseVulnerabilityAssessmentRuleBaseline")
 			return err
 		}
@@ -6805,14 +7289,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Elasticpool",
 	}:
 		if err := (&controllersmssql.ElasticpoolReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Elasticpool"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_elasticpool"],
-			TypeName: "azurerm_mssql_elasticpool",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Elasticpool"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_elasticpool"],
+			TypeName:         "azurerm_mssql_elasticpool",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Elasticpool")
 			return err
 		}
@@ -6822,14 +7307,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FirewallRule",
 	}:
 		if err := (&controllersmssql.FirewallRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FirewallRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_firewall_rule"],
-			TypeName: "azurerm_mssql_firewall_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FirewallRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_firewall_rule"],
+			TypeName:         "azurerm_mssql_firewall_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FirewallRule")
 			return err
 		}
@@ -6839,14 +7325,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "JobAgent",
 	}:
 		if err := (&controllersmssql.JobAgentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("JobAgent"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_job_agent"],
-			TypeName: "azurerm_mssql_job_agent",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("JobAgent"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_job_agent"],
+			TypeName:         "azurerm_mssql_job_agent",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "JobAgent")
 			return err
 		}
@@ -6856,14 +7343,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "JobCredential",
 	}:
 		if err := (&controllersmssql.JobCredentialReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("JobCredential"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_job_credential"],
-			TypeName: "azurerm_mssql_job_credential",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("JobCredential"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_job_credential"],
+			TypeName:         "azurerm_mssql_job_credential",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "JobCredential")
 			return err
 		}
@@ -6873,14 +7361,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Server",
 	}:
 		if err := (&controllersmssql.ServerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Server"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_server"],
-			TypeName: "azurerm_mssql_server",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Server"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_server"],
+			TypeName:         "azurerm_mssql_server",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Server")
 			return err
 		}
@@ -6890,14 +7379,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServerExtendedAuditingPolicy",
 	}:
 		if err := (&controllersmssql.ServerExtendedAuditingPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServerExtendedAuditingPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_server_extended_auditing_policy"],
-			TypeName: "azurerm_mssql_server_extended_auditing_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServerExtendedAuditingPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_server_extended_auditing_policy"],
+			TypeName:         "azurerm_mssql_server_extended_auditing_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServerExtendedAuditingPolicy")
 			return err
 		}
@@ -6907,14 +7397,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServerSecurityAlertPolicy",
 	}:
 		if err := (&controllersmssql.ServerSecurityAlertPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServerSecurityAlertPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_server_security_alert_policy"],
-			TypeName: "azurerm_mssql_server_security_alert_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServerSecurityAlertPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_server_security_alert_policy"],
+			TypeName:         "azurerm_mssql_server_security_alert_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServerSecurityAlertPolicy")
 			return err
 		}
@@ -6924,14 +7415,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServerTransparentDataEncryption",
 	}:
 		if err := (&controllersmssql.ServerTransparentDataEncryptionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServerTransparentDataEncryption"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_server_transparent_data_encryption"],
-			TypeName: "azurerm_mssql_server_transparent_data_encryption",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServerTransparentDataEncryption"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_server_transparent_data_encryption"],
+			TypeName:         "azurerm_mssql_server_transparent_data_encryption",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServerTransparentDataEncryption")
 			return err
 		}
@@ -6941,14 +7433,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServerVulnerabilityAssessment",
 	}:
 		if err := (&controllersmssql.ServerVulnerabilityAssessmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServerVulnerabilityAssessment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_server_vulnerability_assessment"],
-			TypeName: "azurerm_mssql_server_vulnerability_assessment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServerVulnerabilityAssessment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_server_vulnerability_assessment"],
+			TypeName:         "azurerm_mssql_server_vulnerability_assessment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServerVulnerabilityAssessment")
 			return err
 		}
@@ -6958,14 +7451,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualMachine",
 	}:
 		if err := (&controllersmssql.VirtualMachineReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualMachine"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_virtual_machine"],
-			TypeName: "azurerm_mssql_virtual_machine",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualMachine"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_virtual_machine"],
+			TypeName:         "azurerm_mssql_virtual_machine",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualMachine")
 			return err
 		}
@@ -6975,14 +7469,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualNetworkRule",
 	}:
 		if err := (&controllersmssql.VirtualNetworkRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualNetworkRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mssql_virtual_network_rule"],
-			TypeName: "azurerm_mssql_virtual_network_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualNetworkRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mssql_virtual_network_rule"],
+			TypeName:         "azurerm_mssql_virtual_network_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualNetworkRule")
 			return err
 		}
@@ -6992,14 +7487,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ActiveDirectoryAdministrator",
 	}:
 		if err := (&controllersmysql.ActiveDirectoryAdministratorReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ActiveDirectoryAdministrator"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mysql_active_directory_administrator"],
-			TypeName: "azurerm_mysql_active_directory_administrator",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ActiveDirectoryAdministrator"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mysql_active_directory_administrator"],
+			TypeName:         "azurerm_mysql_active_directory_administrator",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ActiveDirectoryAdministrator")
 			return err
 		}
@@ -7009,14 +7505,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Configuration",
 	}:
 		if err := (&controllersmysql.ConfigurationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Configuration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mysql_configuration"],
-			TypeName: "azurerm_mysql_configuration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Configuration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mysql_configuration"],
+			TypeName:         "azurerm_mysql_configuration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Configuration")
 			return err
 		}
@@ -7026,14 +7523,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Database",
 	}:
 		if err := (&controllersmysql.DatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Database"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mysql_database"],
-			TypeName: "azurerm_mysql_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Database"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mysql_database"],
+			TypeName:         "azurerm_mysql_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Database")
 			return err
 		}
@@ -7043,14 +7541,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FirewallRule",
 	}:
 		if err := (&controllersmysql.FirewallRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FirewallRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mysql_firewall_rule"],
-			TypeName: "azurerm_mysql_firewall_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FirewallRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mysql_firewall_rule"],
+			TypeName:         "azurerm_mysql_firewall_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FirewallRule")
 			return err
 		}
@@ -7060,14 +7559,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Server",
 	}:
 		if err := (&controllersmysql.ServerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Server"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mysql_server"],
-			TypeName: "azurerm_mysql_server",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Server"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mysql_server"],
+			TypeName:         "azurerm_mysql_server",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Server")
 			return err
 		}
@@ -7077,14 +7577,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServerKey",
 	}:
 		if err := (&controllersmysql.ServerKeyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServerKey"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mysql_server_key"],
-			TypeName: "azurerm_mysql_server_key",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServerKey"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mysql_server_key"],
+			TypeName:         "azurerm_mysql_server_key",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServerKey")
 			return err
 		}
@@ -7094,14 +7595,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualNetworkRule",
 	}:
 		if err := (&controllersmysql.VirtualNetworkRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualNetworkRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_mysql_virtual_network_rule"],
-			TypeName: "azurerm_mysql_virtual_network_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualNetworkRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_mysql_virtual_network_rule"],
+			TypeName:         "azurerm_mysql_virtual_network_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualNetworkRule")
 			return err
 		}
@@ -7111,14 +7613,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Gateway",
 	}:
 		if err := (&controllersnat.GatewayReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Gateway"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_nat_gateway"],
-			TypeName: "azurerm_nat_gateway",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Gateway"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_nat_gateway"],
+			TypeName:         "azurerm_nat_gateway",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Gateway")
 			return err
 		}
@@ -7128,14 +7631,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "GatewayPublicIPAssociation",
 	}:
 		if err := (&controllersnat.GatewayPublicIPAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("GatewayPublicIPAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_nat_gateway_public_ip_association"],
-			TypeName: "azurerm_nat_gateway_public_ip_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GatewayPublicIPAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_nat_gateway_public_ip_association"],
+			TypeName:         "azurerm_nat_gateway_public_ip_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "GatewayPublicIPAssociation")
 			return err
 		}
@@ -7145,14 +7649,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "GatewayPublicIPPrefixAssociation",
 	}:
 		if err := (&controllersnat.GatewayPublicIPPrefixAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("GatewayPublicIPPrefixAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_nat_gateway_public_ip_prefix_association"],
-			TypeName: "azurerm_nat_gateway_public_ip_prefix_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GatewayPublicIPPrefixAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_nat_gateway_public_ip_prefix_association"],
+			TypeName:         "azurerm_nat_gateway_public_ip_prefix_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "GatewayPublicIPPrefixAssociation")
 			return err
 		}
@@ -7162,14 +7667,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Account",
 	}:
 		if err := (&controllersnetapp.AccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Account"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_netapp_account"],
-			TypeName: "azurerm_netapp_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Account"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_netapp_account"],
+			TypeName:         "azurerm_netapp_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Account")
 			return err
 		}
@@ -7179,14 +7685,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Pool",
 	}:
 		if err := (&controllersnetapp.PoolReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Pool"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_netapp_pool"],
-			TypeName: "azurerm_netapp_pool",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Pool"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_netapp_pool"],
+			TypeName:         "azurerm_netapp_pool",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Pool")
 			return err
 		}
@@ -7196,14 +7703,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Snapshot",
 	}:
 		if err := (&controllersnetapp.SnapshotReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Snapshot"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_netapp_snapshot"],
-			TypeName: "azurerm_netapp_snapshot",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Snapshot"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_netapp_snapshot"],
+			TypeName:         "azurerm_netapp_snapshot",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Snapshot")
 			return err
 		}
@@ -7213,14 +7721,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Volume",
 	}:
 		if err := (&controllersnetapp.VolumeReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Volume"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_netapp_volume"],
-			TypeName: "azurerm_netapp_volume",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Volume"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_netapp_volume"],
+			TypeName:         "azurerm_netapp_volume",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Volume")
 			return err
 		}
@@ -7230,14 +7739,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ConnectionMonitor",
 	}:
 		if err := (&controllersnetwork.ConnectionMonitorReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ConnectionMonitor"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_connection_monitor"],
-			TypeName: "azurerm_network_connection_monitor",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ConnectionMonitor"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_connection_monitor"],
+			TypeName:         "azurerm_network_connection_monitor",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ConnectionMonitor")
 			return err
 		}
@@ -7247,14 +7757,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DdosProtectionPlan",
 	}:
 		if err := (&controllersnetwork.DdosProtectionPlanReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DdosProtectionPlan"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_ddos_protection_plan"],
-			TypeName: "azurerm_network_ddos_protection_plan",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DdosProtectionPlan"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_ddos_protection_plan"],
+			TypeName:         "azurerm_network_ddos_protection_plan",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DdosProtectionPlan")
 			return err
 		}
@@ -7264,14 +7775,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Interface",
 	}:
 		if err := (&controllersnetwork.InterfaceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Interface"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_interface"],
-			TypeName: "azurerm_network_interface",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Interface"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_interface"],
+			TypeName:         "azurerm_network_interface",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Interface")
 			return err
 		}
@@ -7281,14 +7793,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "InterfaceApplicationGatewayBackendAddressPoolAssociation",
 	}:
 		if err := (&controllersnetwork.InterfaceApplicationGatewayBackendAddressPoolAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("InterfaceApplicationGatewayBackendAddressPoolAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_interface_application_gateway_backend_address_pool_association"],
-			TypeName: "azurerm_network_interface_application_gateway_backend_address_pool_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("InterfaceApplicationGatewayBackendAddressPoolAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_interface_application_gateway_backend_address_pool_association"],
+			TypeName:         "azurerm_network_interface_application_gateway_backend_address_pool_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "InterfaceApplicationGatewayBackendAddressPoolAssociation")
 			return err
 		}
@@ -7298,14 +7811,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "InterfaceApplicationSecurityGroupAssociation",
 	}:
 		if err := (&controllersnetwork.InterfaceApplicationSecurityGroupAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("InterfaceApplicationSecurityGroupAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_interface_application_security_group_association"],
-			TypeName: "azurerm_network_interface_application_security_group_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("InterfaceApplicationSecurityGroupAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_interface_application_security_group_association"],
+			TypeName:         "azurerm_network_interface_application_security_group_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "InterfaceApplicationSecurityGroupAssociation")
 			return err
 		}
@@ -7315,14 +7829,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "InterfaceBackendAddressPoolAssociation",
 	}:
 		if err := (&controllersnetwork.InterfaceBackendAddressPoolAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("InterfaceBackendAddressPoolAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_interface_backend_address_pool_association"],
-			TypeName: "azurerm_network_interface_backend_address_pool_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("InterfaceBackendAddressPoolAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_interface_backend_address_pool_association"],
+			TypeName:         "azurerm_network_interface_backend_address_pool_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "InterfaceBackendAddressPoolAssociation")
 			return err
 		}
@@ -7332,14 +7847,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "InterfaceNATRuleAssociation",
 	}:
 		if err := (&controllersnetwork.InterfaceNATRuleAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("InterfaceNATRuleAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_interface_nat_rule_association"],
-			TypeName: "azurerm_network_interface_nat_rule_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("InterfaceNATRuleAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_interface_nat_rule_association"],
+			TypeName:         "azurerm_network_interface_nat_rule_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "InterfaceNATRuleAssociation")
 			return err
 		}
@@ -7349,14 +7865,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "InterfaceSecurityGroupAssociation",
 	}:
 		if err := (&controllersnetwork.InterfaceSecurityGroupAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("InterfaceSecurityGroupAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_interface_security_group_association"],
-			TypeName: "azurerm_network_interface_security_group_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("InterfaceSecurityGroupAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_interface_security_group_association"],
+			TypeName:         "azurerm_network_interface_security_group_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "InterfaceSecurityGroupAssociation")
 			return err
 		}
@@ -7366,14 +7883,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "PacketCapture",
 	}:
 		if err := (&controllersnetwork.PacketCaptureReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("PacketCapture"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_packet_capture"],
-			TypeName: "azurerm_network_packet_capture",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("PacketCapture"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_packet_capture"],
+			TypeName:         "azurerm_network_packet_capture",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "PacketCapture")
 			return err
 		}
@@ -7383,14 +7901,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Profile",
 	}:
 		if err := (&controllersnetwork.ProfileReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Profile"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_profile"],
-			TypeName: "azurerm_network_profile",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Profile"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_profile"],
+			TypeName:         "azurerm_network_profile",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Profile")
 			return err
 		}
@@ -7400,14 +7919,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SecurityGroup",
 	}:
 		if err := (&controllersnetwork.SecurityGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SecurityGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_security_group"],
-			TypeName: "azurerm_network_security_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SecurityGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_security_group"],
+			TypeName:         "azurerm_network_security_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SecurityGroup")
 			return err
 		}
@@ -7417,14 +7937,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SecurityRule",
 	}:
 		if err := (&controllersnetwork.SecurityRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SecurityRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_security_rule"],
-			TypeName: "azurerm_network_security_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SecurityRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_security_rule"],
+			TypeName:         "azurerm_network_security_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SecurityRule")
 			return err
 		}
@@ -7434,14 +7955,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Watcher",
 	}:
 		if err := (&controllersnetwork.WatcherReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Watcher"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_watcher"],
-			TypeName: "azurerm_network_watcher",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Watcher"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_watcher"],
+			TypeName:         "azurerm_network_watcher",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Watcher")
 			return err
 		}
@@ -7451,14 +7973,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "WatcherFlowLog",
 	}:
 		if err := (&controllersnetwork.WatcherFlowLogReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("WatcherFlowLog"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_network_watcher_flow_log"],
-			TypeName: "azurerm_network_watcher_flow_log",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("WatcherFlowLog"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_network_watcher_flow_log"],
+			TypeName:         "azurerm_network_watcher_flow_log",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "WatcherFlowLog")
 			return err
 		}
@@ -7468,14 +7991,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NotificationHub",
 	}:
 		if err := (&controllersnotificationhub.NotificationHubReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NotificationHub"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_notification_hub"],
-			TypeName: "azurerm_notification_hub",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NotificationHub"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_notification_hub"],
+			TypeName:         "azurerm_notification_hub",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NotificationHub")
 			return err
 		}
@@ -7485,14 +8009,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AuthorizationRule",
 	}:
 		if err := (&controllersnotificationhub.AuthorizationRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AuthorizationRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_notification_hub_authorization_rule"],
-			TypeName: "azurerm_notification_hub_authorization_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AuthorizationRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_notification_hub_authorization_rule"],
+			TypeName:         "azurerm_notification_hub_authorization_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AuthorizationRule")
 			return err
 		}
@@ -7502,14 +8027,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Namespace_",
 	}:
 		if err := (&controllersnotificationhub.Namespace_Reconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Namespace_"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_notification_hub_namespace"],
-			TypeName: "azurerm_notification_hub_namespace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Namespace_"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_notification_hub_namespace"],
+			TypeName:         "azurerm_notification_hub_namespace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Namespace_")
 			return err
 		}
@@ -7519,14 +8045,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualMachineScaleSet",
 	}:
 		if err := (&controllersorchestrated.VirtualMachineScaleSetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualMachineScaleSet"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_orchestrated_virtual_machine_scale_set"],
-			TypeName: "azurerm_orchestrated_virtual_machine_scale_set",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualMachineScaleSet"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_orchestrated_virtual_machine_scale_set"],
+			TypeName:         "azurerm_orchestrated_virtual_machine_scale_set",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualMachineScaleSet")
 			return err
 		}
@@ -7536,14 +8063,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Capture",
 	}:
 		if err := (&controllerspacket.CaptureReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Capture"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_packet_capture"],
-			TypeName: "azurerm_packet_capture",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Capture"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_packet_capture"],
+			TypeName:         "azurerm_packet_capture",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Capture")
 			return err
 		}
@@ -7553,14 +8081,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ToSiteVPNGateway",
 	}:
 		if err := (&controllerspoint.ToSiteVPNGatewayReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ToSiteVPNGateway"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_point_to_site_vpn_gateway"],
-			TypeName: "azurerm_point_to_site_vpn_gateway",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ToSiteVPNGateway"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_point_to_site_vpn_gateway"],
+			TypeName:         "azurerm_point_to_site_vpn_gateway",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ToSiteVPNGateway")
 			return err
 		}
@@ -7570,14 +8099,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Assignment",
 	}:
 		if err := (&controllerspolicy.AssignmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Assignment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_policy_assignment"],
-			TypeName: "azurerm_policy_assignment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Assignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_policy_assignment"],
+			TypeName:         "azurerm_policy_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Assignment")
 			return err
 		}
@@ -7587,14 +8117,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Definition",
 	}:
 		if err := (&controllerspolicy.DefinitionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Definition"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_policy_definition"],
-			TypeName: "azurerm_policy_definition",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Definition"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_policy_definition"],
+			TypeName:         "azurerm_policy_definition",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Definition")
 			return err
 		}
@@ -7604,14 +8135,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Remediation",
 	}:
 		if err := (&controllerspolicy.RemediationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Remediation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_policy_remediation"],
-			TypeName: "azurerm_policy_remediation",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Remediation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_policy_remediation"],
+			TypeName:         "azurerm_policy_remediation",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Remediation")
 			return err
 		}
@@ -7621,15 +8153,34 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SetDefinition",
 	}:
 		if err := (&controllerspolicy.SetDefinitionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SetDefinition"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_policy_set_definition"],
-			TypeName: "azurerm_policy_set_definition",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SetDefinition"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_policy_set_definition"],
+			TypeName:         "azurerm_policy_set_definition",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SetDefinition")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "portal.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "TenantConfiguration",
+	}:
+		if err := (&controllersportal.TenantConfigurationReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TenantConfiguration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_portal_tenant_configuration"],
+			TypeName:         "azurerm_portal_tenant_configuration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "TenantConfiguration")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -7638,14 +8189,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ActiveDirectoryAdministrator",
 	}:
 		if err := (&controllerspostgresql.ActiveDirectoryAdministratorReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ActiveDirectoryAdministrator"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_postgresql_active_directory_administrator"],
-			TypeName: "azurerm_postgresql_active_directory_administrator",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ActiveDirectoryAdministrator"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_postgresql_active_directory_administrator"],
+			TypeName:         "azurerm_postgresql_active_directory_administrator",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ActiveDirectoryAdministrator")
 			return err
 		}
@@ -7655,14 +8207,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Configuration",
 	}:
 		if err := (&controllerspostgresql.ConfigurationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Configuration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_postgresql_configuration"],
-			TypeName: "azurerm_postgresql_configuration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Configuration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_postgresql_configuration"],
+			TypeName:         "azurerm_postgresql_configuration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Configuration")
 			return err
 		}
@@ -7672,14 +8225,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Database",
 	}:
 		if err := (&controllerspostgresql.DatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Database"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_postgresql_database"],
-			TypeName: "azurerm_postgresql_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Database"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_postgresql_database"],
+			TypeName:         "azurerm_postgresql_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Database")
 			return err
 		}
@@ -7689,14 +8243,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FirewallRule",
 	}:
 		if err := (&controllerspostgresql.FirewallRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FirewallRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_postgresql_firewall_rule"],
-			TypeName: "azurerm_postgresql_firewall_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FirewallRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_postgresql_firewall_rule"],
+			TypeName:         "azurerm_postgresql_firewall_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FirewallRule")
 			return err
 		}
@@ -7706,14 +8261,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FlexibleServer",
 	}:
 		if err := (&controllerspostgresql.FlexibleServerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FlexibleServer"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_postgresql_flexible_server"],
-			TypeName: "azurerm_postgresql_flexible_server",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FlexibleServer"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_postgresql_flexible_server"],
+			TypeName:         "azurerm_postgresql_flexible_server",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FlexibleServer")
 			return err
 		}
@@ -7723,14 +8279,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FlexibleServerFirewallRule",
 	}:
 		if err := (&controllerspostgresql.FlexibleServerFirewallRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FlexibleServerFirewallRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_postgresql_flexible_server_firewall_rule"],
-			TypeName: "azurerm_postgresql_flexible_server_firewall_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FlexibleServerFirewallRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_postgresql_flexible_server_firewall_rule"],
+			TypeName:         "azurerm_postgresql_flexible_server_firewall_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FlexibleServerFirewallRule")
 			return err
 		}
@@ -7740,14 +8297,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Server",
 	}:
 		if err := (&controllerspostgresql.ServerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Server"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_postgresql_server"],
-			TypeName: "azurerm_postgresql_server",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Server"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_postgresql_server"],
+			TypeName:         "azurerm_postgresql_server",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Server")
 			return err
 		}
@@ -7757,14 +8315,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServerKey",
 	}:
 		if err := (&controllerspostgresql.ServerKeyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServerKey"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_postgresql_server_key"],
-			TypeName: "azurerm_postgresql_server_key",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServerKey"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_postgresql_server_key"],
+			TypeName:         "azurerm_postgresql_server_key",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServerKey")
 			return err
 		}
@@ -7774,14 +8333,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualNetworkRule",
 	}:
 		if err := (&controllerspostgresql.VirtualNetworkRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualNetworkRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_postgresql_virtual_network_rule"],
-			TypeName: "azurerm_postgresql_virtual_network_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualNetworkRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_postgresql_virtual_network_rule"],
+			TypeName:         "azurerm_postgresql_virtual_network_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualNetworkRule")
 			return err
 		}
@@ -7791,14 +8351,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Embedded",
 	}:
 		if err := (&controllerspowerbi.EmbeddedReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Embedded"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_powerbi_embedded"],
-			TypeName: "azurerm_powerbi_embedded",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Embedded"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_powerbi_embedded"],
+			TypeName:         "azurerm_powerbi_embedded",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Embedded")
 			return err
 		}
@@ -7808,14 +8369,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DnsARecord",
 	}:
 		if err := (&controllersprivate.DnsARecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DnsARecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_private_dns_a_record"],
-			TypeName: "azurerm_private_dns_a_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DnsARecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_private_dns_a_record"],
+			TypeName:         "azurerm_private_dns_a_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DnsARecord")
 			return err
 		}
@@ -7825,14 +8387,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DnsAaaaRecord",
 	}:
 		if err := (&controllersprivate.DnsAaaaRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DnsAaaaRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_private_dns_aaaa_record"],
-			TypeName: "azurerm_private_dns_aaaa_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DnsAaaaRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_private_dns_aaaa_record"],
+			TypeName:         "azurerm_private_dns_aaaa_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DnsAaaaRecord")
 			return err
 		}
@@ -7842,14 +8405,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DnsCnameRecord",
 	}:
 		if err := (&controllersprivate.DnsCnameRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DnsCnameRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_private_dns_cname_record"],
-			TypeName: "azurerm_private_dns_cname_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DnsCnameRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_private_dns_cname_record"],
+			TypeName:         "azurerm_private_dns_cname_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DnsCnameRecord")
 			return err
 		}
@@ -7859,14 +8423,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DnsMxRecord",
 	}:
 		if err := (&controllersprivate.DnsMxRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DnsMxRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_private_dns_mx_record"],
-			TypeName: "azurerm_private_dns_mx_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DnsMxRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_private_dns_mx_record"],
+			TypeName:         "azurerm_private_dns_mx_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DnsMxRecord")
 			return err
 		}
@@ -7876,14 +8441,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DnsPtrRecord",
 	}:
 		if err := (&controllersprivate.DnsPtrRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DnsPtrRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_private_dns_ptr_record"],
-			TypeName: "azurerm_private_dns_ptr_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DnsPtrRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_private_dns_ptr_record"],
+			TypeName:         "azurerm_private_dns_ptr_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DnsPtrRecord")
 			return err
 		}
@@ -7893,14 +8459,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DnsSrvRecord",
 	}:
 		if err := (&controllersprivate.DnsSrvRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DnsSrvRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_private_dns_srv_record"],
-			TypeName: "azurerm_private_dns_srv_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DnsSrvRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_private_dns_srv_record"],
+			TypeName:         "azurerm_private_dns_srv_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DnsSrvRecord")
 			return err
 		}
@@ -7910,14 +8477,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DnsTxtRecord",
 	}:
 		if err := (&controllersprivate.DnsTxtRecordReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DnsTxtRecord"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_private_dns_txt_record"],
-			TypeName: "azurerm_private_dns_txt_record",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DnsTxtRecord"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_private_dns_txt_record"],
+			TypeName:         "azurerm_private_dns_txt_record",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DnsTxtRecord")
 			return err
 		}
@@ -7927,14 +8495,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DnsZone",
 	}:
 		if err := (&controllersprivate.DnsZoneReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DnsZone"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_private_dns_zone"],
-			TypeName: "azurerm_private_dns_zone",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DnsZone"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_private_dns_zone"],
+			TypeName:         "azurerm_private_dns_zone",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DnsZone")
 			return err
 		}
@@ -7944,14 +8513,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DnsZoneVirtualNetworkLink",
 	}:
 		if err := (&controllersprivate.DnsZoneVirtualNetworkLinkReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DnsZoneVirtualNetworkLink"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_private_dns_zone_virtual_network_link"],
-			TypeName: "azurerm_private_dns_zone_virtual_network_link",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DnsZoneVirtualNetworkLink"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_private_dns_zone_virtual_network_link"],
+			TypeName:         "azurerm_private_dns_zone_virtual_network_link",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DnsZoneVirtualNetworkLink")
 			return err
 		}
@@ -7961,14 +8531,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Endpoint",
 	}:
 		if err := (&controllersprivate.EndpointReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Endpoint"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_private_endpoint"],
-			TypeName: "azurerm_private_endpoint",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Endpoint"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_private_endpoint"],
+			TypeName:         "azurerm_private_endpoint",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Endpoint")
 			return err
 		}
@@ -7978,14 +8549,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LinkService",
 	}:
 		if err := (&controllersprivate.LinkServiceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LinkService"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_private_link_service"],
-			TypeName: "azurerm_private_link_service",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LinkService"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_private_link_service"],
+			TypeName:         "azurerm_private_link_service",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LinkService")
 			return err
 		}
@@ -7995,14 +8567,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "PlacementGroup",
 	}:
 		if err := (&controllersproximity.PlacementGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("PlacementGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_proximity_placement_group"],
-			TypeName: "azurerm_proximity_placement_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("PlacementGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_proximity_placement_group"],
+			TypeName:         "azurerm_proximity_placement_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "PlacementGroup")
 			return err
 		}
@@ -8012,14 +8585,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "PublicIP",
 	}:
 		if err := (&controllerspublicip.PublicIPReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("PublicIP"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_public_ip"],
-			TypeName: "azurerm_public_ip",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("PublicIP"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_public_ip"],
+			TypeName:         "azurerm_public_ip",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "PublicIP")
 			return err
 		}
@@ -8029,14 +8603,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Prefix",
 	}:
 		if err := (&controllerspublicip.PrefixReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Prefix"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_public_ip_prefix"],
-			TypeName: "azurerm_public_ip_prefix",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Prefix"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_public_ip_prefix"],
+			TypeName:         "azurerm_public_ip_prefix",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Prefix")
 			return err
 		}
@@ -8046,14 +8621,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Account",
 	}:
 		if err := (&controllerspurview.AccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Account"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_purview_account"],
-			TypeName: "azurerm_purview_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Account"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_purview_account"],
+			TypeName:         "azurerm_purview_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Account")
 			return err
 		}
@@ -8063,14 +8639,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServicesVault",
 	}:
 		if err := (&controllersrecovery.ServicesVaultReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServicesVault"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_recovery_services_vault"],
-			TypeName: "azurerm_recovery_services_vault",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServicesVault"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_recovery_services_vault"],
+			TypeName:         "azurerm_recovery_services_vault",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServicesVault")
 			return err
 		}
@@ -8080,14 +8657,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Cache",
 	}:
 		if err := (&controllersredis.CacheReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Cache"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_redis_cache"],
-			TypeName: "azurerm_redis_cache",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Cache"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_redis_cache"],
+			TypeName:         "azurerm_redis_cache",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Cache")
 			return err
 		}
@@ -8097,14 +8675,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EnterpriseCluster",
 	}:
 		if err := (&controllersredis.EnterpriseClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EnterpriseCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_redis_enterprise_cluster"],
-			TypeName: "azurerm_redis_enterprise_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EnterpriseCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_redis_enterprise_cluster"],
+			TypeName:         "azurerm_redis_enterprise_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EnterpriseCluster")
 			return err
 		}
@@ -8114,14 +8693,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EnterpriseDatabase",
 	}:
 		if err := (&controllersredis.EnterpriseDatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EnterpriseDatabase"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_redis_enterprise_database"],
-			TypeName: "azurerm_redis_enterprise_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EnterpriseDatabase"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_redis_enterprise_database"],
+			TypeName:         "azurerm_redis_enterprise_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EnterpriseDatabase")
 			return err
 		}
@@ -8131,14 +8711,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FirewallRule",
 	}:
 		if err := (&controllersredis.FirewallRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FirewallRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_redis_firewall_rule"],
-			TypeName: "azurerm_redis_firewall_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FirewallRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_redis_firewall_rule"],
+			TypeName:         "azurerm_redis_firewall_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FirewallRule")
 			return err
 		}
@@ -8148,14 +8729,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "LinkedServer",
 	}:
 		if err := (&controllersredis.LinkedServerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("LinkedServer"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_redis_linked_server"],
-			TypeName: "azurerm_redis_linked_server",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("LinkedServer"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_redis_linked_server"],
+			TypeName:         "azurerm_redis_linked_server",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LinkedServer")
 			return err
 		}
@@ -8165,14 +8747,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "HybridConnection",
 	}:
 		if err := (&controllersrelay.HybridConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("HybridConnection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_relay_hybrid_connection"],
-			TypeName: "azurerm_relay_hybrid_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("HybridConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_relay_hybrid_connection"],
+			TypeName:         "azurerm_relay_hybrid_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "HybridConnection")
 			return err
 		}
@@ -8182,14 +8765,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Namespace_",
 	}:
 		if err := (&controllersrelay.Namespace_Reconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Namespace_"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_relay_namespace"],
-			TypeName: "azurerm_relay_namespace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Namespace_"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_relay_namespace"],
+			TypeName:         "azurerm_relay_namespace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Namespace_")
 			return err
 		}
@@ -8199,15 +8783,34 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Group",
 	}:
 		if err := (&controllersresource.GroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Group"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_resource_group"],
-			TypeName: "azurerm_resource_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Group"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_resource_group"],
+			TypeName:         "azurerm_resource_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Group")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "resource.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "GroupPolicyAssignment",
+	}:
+		if err := (&controllersresource.GroupPolicyAssignmentReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GroupPolicyAssignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_resource_group_policy_assignment"],
+			TypeName:         "azurerm_resource_group_policy_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "GroupPolicyAssignment")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -8216,15 +8819,34 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "GroupTemplateDeployment",
 	}:
 		if err := (&controllersresource.GroupTemplateDeploymentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("GroupTemplateDeployment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_resource_group_template_deployment"],
-			TypeName: "azurerm_resource_group_template_deployment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GroupTemplateDeployment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_resource_group_template_deployment"],
+			TypeName:         "azurerm_resource_group_template_deployment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "GroupTemplateDeployment")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "resource.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PolicyAssignment",
+	}:
+		if err := (&controllersresource.PolicyAssignmentReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("PolicyAssignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_resource_policy_assignment"],
+			TypeName:         "azurerm_resource_policy_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "PolicyAssignment")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -8233,14 +8855,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ProviderRegistration",
 	}:
 		if err := (&controllersresource.ProviderRegistrationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ProviderRegistration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_resource_provider_registration"],
-			TypeName: "azurerm_resource_provider_registration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ProviderRegistration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_resource_provider_registration"],
+			TypeName:         "azurerm_resource_provider_registration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProviderRegistration")
 			return err
 		}
@@ -8250,14 +8873,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Assignment",
 	}:
 		if err := (&controllersrole.AssignmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Assignment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_role_assignment"],
-			TypeName: "azurerm_role_assignment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Assignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_role_assignment"],
+			TypeName:         "azurerm_role_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Assignment")
 			return err
 		}
@@ -8267,14 +8891,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Definition",
 	}:
 		if err := (&controllersrole.DefinitionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Definition"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_role_definition"],
-			TypeName: "azurerm_role_definition",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Definition"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_role_definition"],
+			TypeName:         "azurerm_role_definition",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Definition")
 			return err
 		}
@@ -8284,14 +8909,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Route",
 	}:
 		if err := (&controllersroute.RouteReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Route"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_route"],
-			TypeName: "azurerm_route",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Route"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_route"],
+			TypeName:         "azurerm_route",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Route")
 			return err
 		}
@@ -8301,14 +8927,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Filter",
 	}:
 		if err := (&controllersroute.FilterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Filter"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_route_filter"],
-			TypeName: "azurerm_route_filter",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Filter"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_route_filter"],
+			TypeName:         "azurerm_route_filter",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Filter")
 			return err
 		}
@@ -8318,14 +8945,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Table",
 	}:
 		if err := (&controllersroute.TableReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Table"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_route_table"],
-			TypeName: "azurerm_route_table",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Table"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_route_table"],
+			TypeName:         "azurerm_route_table",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Table")
 			return err
 		}
@@ -8335,14 +8963,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Service",
 	}:
 		if err := (&controllerssearch.ServiceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Service"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_search_service"],
-			TypeName: "azurerm_search_service",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Service"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_search_service"],
+			TypeName:         "azurerm_search_service",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Service")
 			return err
 		}
@@ -8352,14 +8981,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CenterAssessment",
 	}:
 		if err := (&controllerssecurity.CenterAssessmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CenterAssessment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_security_center_assessment"],
-			TypeName: "azurerm_security_center_assessment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CenterAssessment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_security_center_assessment"],
+			TypeName:         "azurerm_security_center_assessment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CenterAssessment")
 			return err
 		}
@@ -8369,14 +8999,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CenterAssessmentMetadata",
 	}:
 		if err := (&controllerssecurity.CenterAssessmentMetadataReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CenterAssessmentMetadata"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_security_center_assessment_metadata"],
-			TypeName: "azurerm_security_center_assessment_metadata",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CenterAssessmentMetadata"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_security_center_assessment_metadata"],
+			TypeName:         "azurerm_security_center_assessment_metadata",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CenterAssessmentMetadata")
 			return err
 		}
@@ -8386,14 +9017,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CenterAssessmentPolicy",
 	}:
 		if err := (&controllerssecurity.CenterAssessmentPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CenterAssessmentPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_security_center_assessment_policy"],
-			TypeName: "azurerm_security_center_assessment_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CenterAssessmentPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_security_center_assessment_policy"],
+			TypeName:         "azurerm_security_center_assessment_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CenterAssessmentPolicy")
 			return err
 		}
@@ -8403,14 +9035,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CenterAutoProvisioning",
 	}:
 		if err := (&controllerssecurity.CenterAutoProvisioningReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CenterAutoProvisioning"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_security_center_auto_provisioning"],
-			TypeName: "azurerm_security_center_auto_provisioning",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CenterAutoProvisioning"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_security_center_auto_provisioning"],
+			TypeName:         "azurerm_security_center_auto_provisioning",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CenterAutoProvisioning")
 			return err
 		}
@@ -8420,14 +9053,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CenterAutomation",
 	}:
 		if err := (&controllerssecurity.CenterAutomationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CenterAutomation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_security_center_automation"],
-			TypeName: "azurerm_security_center_automation",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CenterAutomation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_security_center_automation"],
+			TypeName:         "azurerm_security_center_automation",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CenterAutomation")
 			return err
 		}
@@ -8437,14 +9071,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CenterContact",
 	}:
 		if err := (&controllerssecurity.CenterContactReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CenterContact"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_security_center_contact"],
-			TypeName: "azurerm_security_center_contact",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CenterContact"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_security_center_contact"],
+			TypeName:         "azurerm_security_center_contact",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CenterContact")
 			return err
 		}
@@ -8454,14 +9089,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CenterServerVulnerabilityAssessment",
 	}:
 		if err := (&controllerssecurity.CenterServerVulnerabilityAssessmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CenterServerVulnerabilityAssessment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_security_center_server_vulnerability_assessment"],
-			TypeName: "azurerm_security_center_server_vulnerability_assessment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CenterServerVulnerabilityAssessment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_security_center_server_vulnerability_assessment"],
+			TypeName:         "azurerm_security_center_server_vulnerability_assessment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CenterServerVulnerabilityAssessment")
 			return err
 		}
@@ -8471,14 +9107,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CenterSetting",
 	}:
 		if err := (&controllerssecurity.CenterSettingReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CenterSetting"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_security_center_setting"],
-			TypeName: "azurerm_security_center_setting",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CenterSetting"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_security_center_setting"],
+			TypeName:         "azurerm_security_center_setting",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CenterSetting")
 			return err
 		}
@@ -8488,14 +9125,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CenterSubscriptionPricing",
 	}:
 		if err := (&controllerssecurity.CenterSubscriptionPricingReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CenterSubscriptionPricing"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_security_center_subscription_pricing"],
-			TypeName: "azurerm_security_center_subscription_pricing",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CenterSubscriptionPricing"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_security_center_subscription_pricing"],
+			TypeName:         "azurerm_security_center_subscription_pricing",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CenterSubscriptionPricing")
 			return err
 		}
@@ -8505,14 +9143,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CenterWorkspace",
 	}:
 		if err := (&controllerssecurity.CenterWorkspaceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CenterWorkspace"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_security_center_workspace"],
-			TypeName: "azurerm_security_center_workspace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CenterWorkspace"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_security_center_workspace"],
+			TypeName:         "azurerm_security_center_workspace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CenterWorkspace")
 			return err
 		}
@@ -8522,14 +9161,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AlertRuleFusion",
 	}:
 		if err := (&controllerssentinel.AlertRuleFusionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AlertRuleFusion"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_alert_rule_fusion"],
-			TypeName: "azurerm_sentinel_alert_rule_fusion",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AlertRuleFusion"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_alert_rule_fusion"],
+			TypeName:         "azurerm_sentinel_alert_rule_fusion",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AlertRuleFusion")
 			return err
 		}
@@ -8539,14 +9179,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AlertRuleMachineLearningBehaviorAnalytics",
 	}:
 		if err := (&controllerssentinel.AlertRuleMachineLearningBehaviorAnalyticsReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AlertRuleMachineLearningBehaviorAnalytics"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_alert_rule_machine_learning_behavior_analytics"],
-			TypeName: "azurerm_sentinel_alert_rule_machine_learning_behavior_analytics",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AlertRuleMachineLearningBehaviorAnalytics"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_alert_rule_machine_learning_behavior_analytics"],
+			TypeName:         "azurerm_sentinel_alert_rule_machine_learning_behavior_analytics",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AlertRuleMachineLearningBehaviorAnalytics")
 			return err
 		}
@@ -8556,14 +9197,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AlertRuleMsSecurityIncident",
 	}:
 		if err := (&controllerssentinel.AlertRuleMsSecurityIncidentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AlertRuleMsSecurityIncident"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_alert_rule_ms_security_incident"],
-			TypeName: "azurerm_sentinel_alert_rule_ms_security_incident",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AlertRuleMsSecurityIncident"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_alert_rule_ms_security_incident"],
+			TypeName:         "azurerm_sentinel_alert_rule_ms_security_incident",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AlertRuleMsSecurityIncident")
 			return err
 		}
@@ -8573,14 +9215,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AlertRuleScheduled",
 	}:
 		if err := (&controllerssentinel.AlertRuleScheduledReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AlertRuleScheduled"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_alert_rule_scheduled"],
-			TypeName: "azurerm_sentinel_alert_rule_scheduled",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AlertRuleScheduled"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_alert_rule_scheduled"],
+			TypeName:         "azurerm_sentinel_alert_rule_scheduled",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AlertRuleScheduled")
 			return err
 		}
@@ -8590,14 +9233,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DataConnectorAwsCloudTrail",
 	}:
 		if err := (&controllerssentinel.DataConnectorAwsCloudTrailReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DataConnectorAwsCloudTrail"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_aws_cloud_trail"],
-			TypeName: "azurerm_sentinel_data_connector_aws_cloud_trail",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DataConnectorAwsCloudTrail"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_aws_cloud_trail"],
+			TypeName:         "azurerm_sentinel_data_connector_aws_cloud_trail",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataConnectorAwsCloudTrail")
 			return err
 		}
@@ -8607,14 +9251,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DataConnectorAzureActiveDirectory",
 	}:
 		if err := (&controllerssentinel.DataConnectorAzureActiveDirectoryReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DataConnectorAzureActiveDirectory"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_azure_active_directory"],
-			TypeName: "azurerm_sentinel_data_connector_azure_active_directory",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DataConnectorAzureActiveDirectory"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_azure_active_directory"],
+			TypeName:         "azurerm_sentinel_data_connector_azure_active_directory",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataConnectorAzureActiveDirectory")
 			return err
 		}
@@ -8624,14 +9269,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DataConnectorAzureAdvancedThreatProtection",
 	}:
 		if err := (&controllerssentinel.DataConnectorAzureAdvancedThreatProtectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DataConnectorAzureAdvancedThreatProtection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_azure_advanced_threat_protection"],
-			TypeName: "azurerm_sentinel_data_connector_azure_advanced_threat_protection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DataConnectorAzureAdvancedThreatProtection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_azure_advanced_threat_protection"],
+			TypeName:         "azurerm_sentinel_data_connector_azure_advanced_threat_protection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataConnectorAzureAdvancedThreatProtection")
 			return err
 		}
@@ -8641,14 +9287,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DataConnectorAzureSecurityCenter",
 	}:
 		if err := (&controllerssentinel.DataConnectorAzureSecurityCenterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DataConnectorAzureSecurityCenter"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_azure_security_center"],
-			TypeName: "azurerm_sentinel_data_connector_azure_security_center",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DataConnectorAzureSecurityCenter"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_azure_security_center"],
+			TypeName:         "azurerm_sentinel_data_connector_azure_security_center",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataConnectorAzureSecurityCenter")
 			return err
 		}
@@ -8658,14 +9305,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DataConnectorMicrosoftCloudAppSecurity",
 	}:
 		if err := (&controllerssentinel.DataConnectorMicrosoftCloudAppSecurityReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DataConnectorMicrosoftCloudAppSecurity"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_microsoft_cloud_app_security"],
-			TypeName: "azurerm_sentinel_data_connector_microsoft_cloud_app_security",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DataConnectorMicrosoftCloudAppSecurity"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_microsoft_cloud_app_security"],
+			TypeName:         "azurerm_sentinel_data_connector_microsoft_cloud_app_security",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataConnectorMicrosoftCloudAppSecurity")
 			return err
 		}
@@ -8675,14 +9323,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DataConnectorMicrosoftDefenderAdvancedThreatProtection",
 	}:
 		if err := (&controllerssentinel.DataConnectorMicrosoftDefenderAdvancedThreatProtectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DataConnectorMicrosoftDefenderAdvancedThreatProtection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_microsoft_defender_advanced_threat_protection"],
-			TypeName: "azurerm_sentinel_data_connector_microsoft_defender_advanced_threat_protection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DataConnectorMicrosoftDefenderAdvancedThreatProtection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_microsoft_defender_advanced_threat_protection"],
+			TypeName:         "azurerm_sentinel_data_connector_microsoft_defender_advanced_threat_protection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataConnectorMicrosoftDefenderAdvancedThreatProtection")
 			return err
 		}
@@ -8692,14 +9341,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DataConnectorOffice365",
 	}:
 		if err := (&controllerssentinel.DataConnectorOffice365Reconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DataConnectorOffice365"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_office_365"],
-			TypeName: "azurerm_sentinel_data_connector_office_365",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DataConnectorOffice365"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_office_365"],
+			TypeName:         "azurerm_sentinel_data_connector_office_365",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataConnectorOffice365")
 			return err
 		}
@@ -8709,14 +9359,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DataConnectorThreatIntelligence",
 	}:
 		if err := (&controllerssentinel.DataConnectorThreatIntelligenceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DataConnectorThreatIntelligence"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_threat_intelligence"],
-			TypeName: "azurerm_sentinel_data_connector_threat_intelligence",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DataConnectorThreatIntelligence"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sentinel_data_connector_threat_intelligence"],
+			TypeName:         "azurerm_sentinel_data_connector_threat_intelligence",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataConnectorThreatIntelligence")
 			return err
 		}
@@ -8726,14 +9377,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FabricCluster",
 	}:
 		if err := (&controllersservice.FabricClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FabricCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_service_fabric_cluster"],
-			TypeName: "azurerm_service_fabric_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FabricCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_service_fabric_cluster"],
+			TypeName:         "azurerm_service_fabric_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FabricCluster")
 			return err
 		}
@@ -8743,14 +9395,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FabricMeshApplication",
 	}:
 		if err := (&controllersservice.FabricMeshApplicationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FabricMeshApplication"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_service_fabric_mesh_application"],
-			TypeName: "azurerm_service_fabric_mesh_application",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FabricMeshApplication"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_service_fabric_mesh_application"],
+			TypeName:         "azurerm_service_fabric_mesh_application",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FabricMeshApplication")
 			return err
 		}
@@ -8760,14 +9413,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FabricMeshLocalNetwork",
 	}:
 		if err := (&controllersservice.FabricMeshLocalNetworkReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FabricMeshLocalNetwork"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_service_fabric_mesh_local_network"],
-			TypeName: "azurerm_service_fabric_mesh_local_network",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FabricMeshLocalNetwork"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_service_fabric_mesh_local_network"],
+			TypeName:         "azurerm_service_fabric_mesh_local_network",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FabricMeshLocalNetwork")
 			return err
 		}
@@ -8777,14 +9431,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FabricMeshSecret",
 	}:
 		if err := (&controllersservice.FabricMeshSecretReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FabricMeshSecret"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_service_fabric_mesh_secret"],
-			TypeName: "azurerm_service_fabric_mesh_secret",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FabricMeshSecret"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_service_fabric_mesh_secret"],
+			TypeName:         "azurerm_service_fabric_mesh_secret",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FabricMeshSecret")
 			return err
 		}
@@ -8794,14 +9449,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FabricMeshSecretValue",
 	}:
 		if err := (&controllersservice.FabricMeshSecretValueReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FabricMeshSecretValue"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_service_fabric_mesh_secret_value"],
-			TypeName: "azurerm_service_fabric_mesh_secret_value",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FabricMeshSecretValue"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_service_fabric_mesh_secret_value"],
+			TypeName:         "azurerm_service_fabric_mesh_secret_value",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FabricMeshSecretValue")
 			return err
 		}
@@ -8811,14 +9467,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Namespace_",
 	}:
 		if err := (&controllersservicebus.Namespace_Reconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Namespace_"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_servicebus_namespace"],
-			TypeName: "azurerm_servicebus_namespace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Namespace_"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_servicebus_namespace"],
+			TypeName:         "azurerm_servicebus_namespace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Namespace_")
 			return err
 		}
@@ -8828,14 +9485,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NamespaceAuthorizationRule",
 	}:
 		if err := (&controllersservicebus.NamespaceAuthorizationRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NamespaceAuthorizationRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_servicebus_namespace_authorization_rule"],
-			TypeName: "azurerm_servicebus_namespace_authorization_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NamespaceAuthorizationRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_servicebus_namespace_authorization_rule"],
+			TypeName:         "azurerm_servicebus_namespace_authorization_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NamespaceAuthorizationRule")
 			return err
 		}
@@ -8845,14 +9503,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NamespaceDisasterRecoveryConfig",
 	}:
 		if err := (&controllersservicebus.NamespaceDisasterRecoveryConfigReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NamespaceDisasterRecoveryConfig"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_servicebus_namespace_disaster_recovery_config"],
-			TypeName: "azurerm_servicebus_namespace_disaster_recovery_config",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NamespaceDisasterRecoveryConfig"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_servicebus_namespace_disaster_recovery_config"],
+			TypeName:         "azurerm_servicebus_namespace_disaster_recovery_config",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NamespaceDisasterRecoveryConfig")
 			return err
 		}
@@ -8862,14 +9521,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NamespaceNetworkRuleSet",
 	}:
 		if err := (&controllersservicebus.NamespaceNetworkRuleSetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NamespaceNetworkRuleSet"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_servicebus_namespace_network_rule_set"],
-			TypeName: "azurerm_servicebus_namespace_network_rule_set",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NamespaceNetworkRuleSet"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_servicebus_namespace_network_rule_set"],
+			TypeName:         "azurerm_servicebus_namespace_network_rule_set",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NamespaceNetworkRuleSet")
 			return err
 		}
@@ -8879,14 +9539,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Queue",
 	}:
 		if err := (&controllersservicebus.QueueReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Queue"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_servicebus_queue"],
-			TypeName: "azurerm_servicebus_queue",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Queue"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_servicebus_queue"],
+			TypeName:         "azurerm_servicebus_queue",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Queue")
 			return err
 		}
@@ -8896,14 +9557,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "QueueAuthorizationRule",
 	}:
 		if err := (&controllersservicebus.QueueAuthorizationRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("QueueAuthorizationRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_servicebus_queue_authorization_rule"],
-			TypeName: "azurerm_servicebus_queue_authorization_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("QueueAuthorizationRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_servicebus_queue_authorization_rule"],
+			TypeName:         "azurerm_servicebus_queue_authorization_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "QueueAuthorizationRule")
 			return err
 		}
@@ -8913,14 +9575,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Subscription",
 	}:
 		if err := (&controllersservicebus.SubscriptionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Subscription"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_servicebus_subscription"],
-			TypeName: "azurerm_servicebus_subscription",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Subscription"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_servicebus_subscription"],
+			TypeName:         "azurerm_servicebus_subscription",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Subscription")
 			return err
 		}
@@ -8930,14 +9593,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SubscriptionRule",
 	}:
 		if err := (&controllersservicebus.SubscriptionRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SubscriptionRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_servicebus_subscription_rule"],
-			TypeName: "azurerm_servicebus_subscription_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SubscriptionRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_servicebus_subscription_rule"],
+			TypeName:         "azurerm_servicebus_subscription_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SubscriptionRule")
 			return err
 		}
@@ -8947,14 +9611,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Topic",
 	}:
 		if err := (&controllersservicebus.TopicReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Topic"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_servicebus_topic"],
-			TypeName: "azurerm_servicebus_topic",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Topic"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_servicebus_topic"],
+			TypeName:         "azurerm_servicebus_topic",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Topic")
 			return err
 		}
@@ -8964,14 +9629,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TopicAuthorizationRule",
 	}:
 		if err := (&controllersservicebus.TopicAuthorizationRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TopicAuthorizationRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_servicebus_topic_authorization_rule"],
-			TypeName: "azurerm_servicebus_topic_authorization_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TopicAuthorizationRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_servicebus_topic_authorization_rule"],
+			TypeName:         "azurerm_servicebus_topic_authorization_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TopicAuthorizationRule")
 			return err
 		}
@@ -8981,14 +9647,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SharedImage",
 	}:
 		if err := (&controllerssharedimage.SharedImageReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SharedImage"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_shared_image"],
-			TypeName: "azurerm_shared_image",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SharedImage"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_shared_image"],
+			TypeName:         "azurerm_shared_image",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SharedImage")
 			return err
 		}
@@ -8998,14 +9665,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Gallery",
 	}:
 		if err := (&controllerssharedimage.GalleryReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Gallery"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_shared_image_gallery"],
-			TypeName: "azurerm_shared_image_gallery",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Gallery"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_shared_image_gallery"],
+			TypeName:         "azurerm_shared_image_gallery",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Gallery")
 			return err
 		}
@@ -9015,14 +9683,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Version",
 	}:
 		if err := (&controllerssharedimage.VersionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Version"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_shared_image_version"],
-			TypeName: "azurerm_shared_image_version",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Version"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_shared_image_version"],
+			TypeName:         "azurerm_shared_image_version",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Version")
 			return err
 		}
@@ -9032,14 +9701,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Service",
 	}:
 		if err := (&controllerssignalr.ServiceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Service"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_signalr_service"],
-			TypeName: "azurerm_signalr_service",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Service"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_signalr_service"],
+			TypeName:         "azurerm_signalr_service",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Service")
 			return err
 		}
@@ -9049,14 +9719,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Fabric",
 	}:
 		if err := (&controllerssiterecovery.FabricReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Fabric"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_site_recovery_fabric"],
-			TypeName: "azurerm_site_recovery_fabric",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Fabric"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_site_recovery_fabric"],
+			TypeName:         "azurerm_site_recovery_fabric",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Fabric")
 			return err
 		}
@@ -9066,14 +9737,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NetworkMapping",
 	}:
 		if err := (&controllerssiterecovery.NetworkMappingReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NetworkMapping"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_site_recovery_network_mapping"],
-			TypeName: "azurerm_site_recovery_network_mapping",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NetworkMapping"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_site_recovery_network_mapping"],
+			TypeName:         "azurerm_site_recovery_network_mapping",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NetworkMapping")
 			return err
 		}
@@ -9083,14 +9755,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ProtectionContainer",
 	}:
 		if err := (&controllerssiterecovery.ProtectionContainerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ProtectionContainer"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_site_recovery_protection_container"],
-			TypeName: "azurerm_site_recovery_protection_container",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ProtectionContainer"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_site_recovery_protection_container"],
+			TypeName:         "azurerm_site_recovery_protection_container",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProtectionContainer")
 			return err
 		}
@@ -9100,14 +9773,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ProtectionContainerMapping",
 	}:
 		if err := (&controllerssiterecovery.ProtectionContainerMappingReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ProtectionContainerMapping"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_site_recovery_protection_container_mapping"],
-			TypeName: "azurerm_site_recovery_protection_container_mapping",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ProtectionContainerMapping"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_site_recovery_protection_container_mapping"],
+			TypeName:         "azurerm_site_recovery_protection_container_mapping",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProtectionContainerMapping")
 			return err
 		}
@@ -9117,14 +9791,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ReplicatedVm",
 	}:
 		if err := (&controllerssiterecovery.ReplicatedVmReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ReplicatedVm"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_site_recovery_replicated_vm"],
-			TypeName: "azurerm_site_recovery_replicated_vm",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ReplicatedVm"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_site_recovery_replicated_vm"],
+			TypeName:         "azurerm_site_recovery_replicated_vm",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ReplicatedVm")
 			return err
 		}
@@ -9134,14 +9809,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ReplicationPolicy",
 	}:
 		if err := (&controllerssiterecovery.ReplicationPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ReplicationPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_site_recovery_replication_policy"],
-			TypeName: "azurerm_site_recovery_replication_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ReplicationPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_site_recovery_replication_policy"],
+			TypeName:         "azurerm_site_recovery_replication_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ReplicationPolicy")
 			return err
 		}
@@ -9151,14 +9827,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Snapshot",
 	}:
 		if err := (&controllerssnapshot.SnapshotReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Snapshot"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_snapshot"],
-			TypeName: "azurerm_snapshot",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Snapshot"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_snapshot"],
+			TypeName:         "azurerm_snapshot",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Snapshot")
 			return err
 		}
@@ -9168,14 +9845,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnchorsAccount",
 	}:
 		if err := (&controllersspatial.AnchorsAccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnchorsAccount"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_spatial_anchors_account"],
-			TypeName: "azurerm_spatial_anchors_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnchorsAccount"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_spatial_anchors_account"],
+			TypeName:         "azurerm_spatial_anchors_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnchorsAccount")
 			return err
 		}
@@ -9185,14 +9863,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CloudActiveDeployment",
 	}:
 		if err := (&controllersspring.CloudActiveDeploymentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CloudActiveDeployment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_spring_cloud_active_deployment"],
-			TypeName: "azurerm_spring_cloud_active_deployment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CloudActiveDeployment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_spring_cloud_active_deployment"],
+			TypeName:         "azurerm_spring_cloud_active_deployment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CloudActiveDeployment")
 			return err
 		}
@@ -9202,14 +9881,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CloudApp",
 	}:
 		if err := (&controllersspring.CloudAppReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CloudApp"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_spring_cloud_app"],
-			TypeName: "azurerm_spring_cloud_app",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CloudApp"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_spring_cloud_app"],
+			TypeName:         "azurerm_spring_cloud_app",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CloudApp")
 			return err
 		}
@@ -9219,14 +9899,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CloudAppCosmosdbAssociation",
 	}:
 		if err := (&controllersspring.CloudAppCosmosdbAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CloudAppCosmosdbAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_spring_cloud_app_cosmosdb_association"],
-			TypeName: "azurerm_spring_cloud_app_cosmosdb_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CloudAppCosmosdbAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_spring_cloud_app_cosmosdb_association"],
+			TypeName:         "azurerm_spring_cloud_app_cosmosdb_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CloudAppCosmosdbAssociation")
 			return err
 		}
@@ -9236,14 +9917,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CloudAppMysqlAssociation",
 	}:
 		if err := (&controllersspring.CloudAppMysqlAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CloudAppMysqlAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_spring_cloud_app_mysql_association"],
-			TypeName: "azurerm_spring_cloud_app_mysql_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CloudAppMysqlAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_spring_cloud_app_mysql_association"],
+			TypeName:         "azurerm_spring_cloud_app_mysql_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CloudAppMysqlAssociation")
 			return err
 		}
@@ -9253,14 +9935,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CloudAppRedisAssociation",
 	}:
 		if err := (&controllersspring.CloudAppRedisAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CloudAppRedisAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_spring_cloud_app_redis_association"],
-			TypeName: "azurerm_spring_cloud_app_redis_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CloudAppRedisAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_spring_cloud_app_redis_association"],
+			TypeName:         "azurerm_spring_cloud_app_redis_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CloudAppRedisAssociation")
 			return err
 		}
@@ -9270,14 +9953,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CloudCertificate",
 	}:
 		if err := (&controllersspring.CloudCertificateReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CloudCertificate"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_spring_cloud_certificate"],
-			TypeName: "azurerm_spring_cloud_certificate",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CloudCertificate"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_spring_cloud_certificate"],
+			TypeName:         "azurerm_spring_cloud_certificate",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CloudCertificate")
 			return err
 		}
@@ -9287,14 +9971,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CloudCustomDomain",
 	}:
 		if err := (&controllersspring.CloudCustomDomainReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CloudCustomDomain"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_spring_cloud_custom_domain"],
-			TypeName: "azurerm_spring_cloud_custom_domain",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CloudCustomDomain"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_spring_cloud_custom_domain"],
+			TypeName:         "azurerm_spring_cloud_custom_domain",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CloudCustomDomain")
 			return err
 		}
@@ -9304,14 +9989,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CloudJavaDeployment",
 	}:
 		if err := (&controllersspring.CloudJavaDeploymentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CloudJavaDeployment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_spring_cloud_java_deployment"],
-			TypeName: "azurerm_spring_cloud_java_deployment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CloudJavaDeployment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_spring_cloud_java_deployment"],
+			TypeName:         "azurerm_spring_cloud_java_deployment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CloudJavaDeployment")
 			return err
 		}
@@ -9321,14 +10007,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "CloudService",
 	}:
 		if err := (&controllersspring.CloudServiceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("CloudService"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_spring_cloud_service"],
-			TypeName: "azurerm_spring_cloud_service",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("CloudService"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_spring_cloud_service"],
+			TypeName:         "azurerm_spring_cloud_service",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "CloudService")
 			return err
 		}
@@ -9338,14 +10025,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ActiveDirectoryAdministrator",
 	}:
 		if err := (&controllerssql.ActiveDirectoryAdministratorReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ActiveDirectoryAdministrator"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sql_active_directory_administrator"],
-			TypeName: "azurerm_sql_active_directory_administrator",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ActiveDirectoryAdministrator"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sql_active_directory_administrator"],
+			TypeName:         "azurerm_sql_active_directory_administrator",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ActiveDirectoryAdministrator")
 			return err
 		}
@@ -9355,14 +10043,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Database",
 	}:
 		if err := (&controllerssql.DatabaseReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Database"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sql_database"],
-			TypeName: "azurerm_sql_database",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Database"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sql_database"],
+			TypeName:         "azurerm_sql_database",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Database")
 			return err
 		}
@@ -9372,14 +10061,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Elasticpool",
 	}:
 		if err := (&controllerssql.ElasticpoolReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Elasticpool"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sql_elasticpool"],
-			TypeName: "azurerm_sql_elasticpool",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Elasticpool"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sql_elasticpool"],
+			TypeName:         "azurerm_sql_elasticpool",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Elasticpool")
 			return err
 		}
@@ -9389,14 +10079,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FailoverGroup",
 	}:
 		if err := (&controllerssql.FailoverGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FailoverGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sql_failover_group"],
-			TypeName: "azurerm_sql_failover_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FailoverGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sql_failover_group"],
+			TypeName:         "azurerm_sql_failover_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FailoverGroup")
 			return err
 		}
@@ -9406,14 +10097,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FirewallRule",
 	}:
 		if err := (&controllerssql.FirewallRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FirewallRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sql_firewall_rule"],
-			TypeName: "azurerm_sql_firewall_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FirewallRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sql_firewall_rule"],
+			TypeName:         "azurerm_sql_firewall_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FirewallRule")
 			return err
 		}
@@ -9423,14 +10115,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Server",
 	}:
 		if err := (&controllerssql.ServerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Server"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sql_server"],
-			TypeName: "azurerm_sql_server",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Server"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sql_server"],
+			TypeName:         "azurerm_sql_server",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Server")
 			return err
 		}
@@ -9440,14 +10133,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualNetworkRule",
 	}:
 		if err := (&controllerssql.VirtualNetworkRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualNetworkRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_sql_virtual_network_rule"],
-			TypeName: "azurerm_sql_virtual_network_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualNetworkRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_sql_virtual_network_rule"],
+			TypeName:         "azurerm_sql_virtual_network_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualNetworkRule")
 			return err
 		}
@@ -9457,14 +10151,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "PublicKey",
 	}:
 		if err := (&controllersssh.PublicKeyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("PublicKey"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_ssh_public_key"],
-			TypeName: "azurerm_ssh_public_key",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("PublicKey"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_ssh_public_key"],
+			TypeName:         "azurerm_ssh_public_key",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "PublicKey")
 			return err
 		}
@@ -9474,14 +10169,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "HciCluster",
 	}:
 		if err := (&controllersstack.HciClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("HciCluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stack_hci_cluster"],
-			TypeName: "azurerm_stack_hci_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("HciCluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stack_hci_cluster"],
+			TypeName:         "azurerm_stack_hci_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "HciCluster")
 			return err
 		}
@@ -9491,14 +10187,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Site",
 	}:
 		if err := (&controllersstatic.SiteReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Site"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_static_site"],
-			TypeName: "azurerm_static_site",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Site"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_static_site"],
+			TypeName:         "azurerm_static_site",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Site")
 			return err
 		}
@@ -9508,14 +10205,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Account",
 	}:
 		if err := (&controllersstorage.AccountReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Account"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_account"],
-			TypeName: "azurerm_storage_account",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Account"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_account"],
+			TypeName:         "azurerm_storage_account",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Account")
 			return err
 		}
@@ -9525,14 +10223,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AccountCustomerManagedKey",
 	}:
 		if err := (&controllersstorage.AccountCustomerManagedKeyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AccountCustomerManagedKey"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_account_customer_managed_key"],
-			TypeName: "azurerm_storage_account_customer_managed_key",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AccountCustomerManagedKey"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_account_customer_managed_key"],
+			TypeName:         "azurerm_storage_account_customer_managed_key",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AccountCustomerManagedKey")
 			return err
 		}
@@ -9542,14 +10241,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AccountNetworkRules",
 	}:
 		if err := (&controllersstorage.AccountNetworkRulesReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AccountNetworkRules"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_account_network_rules"],
-			TypeName: "azurerm_storage_account_network_rules",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AccountNetworkRules"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_account_network_rules"],
+			TypeName:         "azurerm_storage_account_network_rules",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AccountNetworkRules")
 			return err
 		}
@@ -9559,14 +10259,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Blob",
 	}:
 		if err := (&controllersstorage.BlobReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Blob"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_blob"],
-			TypeName: "azurerm_storage_blob",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Blob"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_blob"],
+			TypeName:         "azurerm_storage_blob",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Blob")
 			return err
 		}
@@ -9576,14 +10277,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "BlobInventoryPolicy",
 	}:
 		if err := (&controllersstorage.BlobInventoryPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("BlobInventoryPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_blob_inventory_policy"],
-			TypeName: "azurerm_storage_blob_inventory_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("BlobInventoryPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_blob_inventory_policy"],
+			TypeName:         "azurerm_storage_blob_inventory_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "BlobInventoryPolicy")
 			return err
 		}
@@ -9593,14 +10295,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Container",
 	}:
 		if err := (&controllersstorage.ContainerReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Container"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_container"],
-			TypeName: "azurerm_storage_container",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Container"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_container"],
+			TypeName:         "azurerm_storage_container",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Container")
 			return err
 		}
@@ -9610,14 +10313,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DataLakeGen2Filesystem",
 	}:
 		if err := (&controllersstorage.DataLakeGen2FilesystemReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DataLakeGen2Filesystem"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_data_lake_gen2_filesystem"],
-			TypeName: "azurerm_storage_data_lake_gen2_filesystem",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DataLakeGen2Filesystem"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_data_lake_gen2_filesystem"],
+			TypeName:         "azurerm_storage_data_lake_gen2_filesystem",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataLakeGen2Filesystem")
 			return err
 		}
@@ -9627,14 +10331,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DataLakeGen2Path",
 	}:
 		if err := (&controllersstorage.DataLakeGen2PathReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DataLakeGen2Path"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_data_lake_gen2_path"],
-			TypeName: "azurerm_storage_data_lake_gen2_path",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DataLakeGen2Path"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_data_lake_gen2_path"],
+			TypeName:         "azurerm_storage_data_lake_gen2_path",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataLakeGen2Path")
 			return err
 		}
@@ -9644,14 +10349,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "EncryptionScope",
 	}:
 		if err := (&controllersstorage.EncryptionScopeReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("EncryptionScope"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_encryption_scope"],
-			TypeName: "azurerm_storage_encryption_scope",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("EncryptionScope"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_encryption_scope"],
+			TypeName:         "azurerm_storage_encryption_scope",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EncryptionScope")
 			return err
 		}
@@ -9661,14 +10367,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ManagementPolicy",
 	}:
 		if err := (&controllersstorage.ManagementPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ManagementPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_management_policy"],
-			TypeName: "azurerm_storage_management_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ManagementPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_management_policy"],
+			TypeName:         "azurerm_storage_management_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ManagementPolicy")
 			return err
 		}
@@ -9678,14 +10385,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ObjectReplication",
 	}:
 		if err := (&controllersstorage.ObjectReplicationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ObjectReplication"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_object_replication"],
-			TypeName: "azurerm_storage_object_replication",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ObjectReplication"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_object_replication"],
+			TypeName:         "azurerm_storage_object_replication",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ObjectReplication")
 			return err
 		}
@@ -9695,14 +10403,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Queue",
 	}:
 		if err := (&controllersstorage.QueueReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Queue"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_queue"],
-			TypeName: "azurerm_storage_queue",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Queue"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_queue"],
+			TypeName:         "azurerm_storage_queue",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Queue")
 			return err
 		}
@@ -9712,14 +10421,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Share",
 	}:
 		if err := (&controllersstorage.ShareReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Share"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_share"],
-			TypeName: "azurerm_storage_share",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Share"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_share"],
+			TypeName:         "azurerm_storage_share",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Share")
 			return err
 		}
@@ -9729,14 +10439,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ShareDirectory",
 	}:
 		if err := (&controllersstorage.ShareDirectoryReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ShareDirectory"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_share_directory"],
-			TypeName: "azurerm_storage_share_directory",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ShareDirectory"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_share_directory"],
+			TypeName:         "azurerm_storage_share_directory",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ShareDirectory")
 			return err
 		}
@@ -9746,14 +10457,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ShareFile",
 	}:
 		if err := (&controllersstorage.ShareFileReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ShareFile"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_share_file"],
-			TypeName: "azurerm_storage_share_file",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ShareFile"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_share_file"],
+			TypeName:         "azurerm_storage_share_file",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ShareFile")
 			return err
 		}
@@ -9763,14 +10475,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Sync",
 	}:
 		if err := (&controllersstorage.SyncReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Sync"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_sync"],
-			TypeName: "azurerm_storage_sync",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Sync"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_sync"],
+			TypeName:         "azurerm_storage_sync",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Sync")
 			return err
 		}
@@ -9780,14 +10493,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SyncCloudEndpoint",
 	}:
 		if err := (&controllersstorage.SyncCloudEndpointReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SyncCloudEndpoint"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_sync_cloud_endpoint"],
-			TypeName: "azurerm_storage_sync_cloud_endpoint",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SyncCloudEndpoint"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_sync_cloud_endpoint"],
+			TypeName:         "azurerm_storage_sync_cloud_endpoint",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SyncCloudEndpoint")
 			return err
 		}
@@ -9797,14 +10511,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SyncGroup",
 	}:
 		if err := (&controllersstorage.SyncGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SyncGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_sync_group"],
-			TypeName: "azurerm_storage_sync_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SyncGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_sync_group"],
+			TypeName:         "azurerm_storage_sync_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SyncGroup")
 			return err
 		}
@@ -9814,14 +10529,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Table",
 	}:
 		if err := (&controllersstorage.TableReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Table"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_table"],
-			TypeName: "azurerm_storage_table",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Table"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_table"],
+			TypeName:         "azurerm_storage_table",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Table")
 			return err
 		}
@@ -9831,14 +10547,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TableEntity",
 	}:
 		if err := (&controllersstorage.TableEntityReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TableEntity"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_storage_table_entity"],
-			TypeName: "azurerm_storage_table_entity",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TableEntity"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_storage_table_entity"],
+			TypeName:         "azurerm_storage_table_entity",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TableEntity")
 			return err
 		}
@@ -9848,14 +10565,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnalyticsFunctionJavascriptUdf",
 	}:
 		if err := (&controllersstream.AnalyticsFunctionJavascriptUdfReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsFunctionJavascriptUdf"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stream_analytics_function_javascript_udf"],
-			TypeName: "azurerm_stream_analytics_function_javascript_udf",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnalyticsFunctionJavascriptUdf"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stream_analytics_function_javascript_udf"],
+			TypeName:         "azurerm_stream_analytics_function_javascript_udf",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsFunctionJavascriptUdf")
 			return err
 		}
@@ -9865,14 +10583,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnalyticsJob",
 	}:
 		if err := (&controllersstream.AnalyticsJobReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsJob"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stream_analytics_job"],
-			TypeName: "azurerm_stream_analytics_job",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnalyticsJob"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stream_analytics_job"],
+			TypeName:         "azurerm_stream_analytics_job",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsJob")
 			return err
 		}
@@ -9882,14 +10601,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnalyticsOutputBlob",
 	}:
 		if err := (&controllersstream.AnalyticsOutputBlobReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsOutputBlob"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stream_analytics_output_blob"],
-			TypeName: "azurerm_stream_analytics_output_blob",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnalyticsOutputBlob"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stream_analytics_output_blob"],
+			TypeName:         "azurerm_stream_analytics_output_blob",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsOutputBlob")
 			return err
 		}
@@ -9899,14 +10619,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnalyticsOutputEventhub",
 	}:
 		if err := (&controllersstream.AnalyticsOutputEventhubReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsOutputEventhub"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stream_analytics_output_eventhub"],
-			TypeName: "azurerm_stream_analytics_output_eventhub",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnalyticsOutputEventhub"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stream_analytics_output_eventhub"],
+			TypeName:         "azurerm_stream_analytics_output_eventhub",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsOutputEventhub")
 			return err
 		}
@@ -9916,14 +10637,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnalyticsOutputMssql",
 	}:
 		if err := (&controllersstream.AnalyticsOutputMssqlReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsOutputMssql"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stream_analytics_output_mssql"],
-			TypeName: "azurerm_stream_analytics_output_mssql",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnalyticsOutputMssql"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stream_analytics_output_mssql"],
+			TypeName:         "azurerm_stream_analytics_output_mssql",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsOutputMssql")
 			return err
 		}
@@ -9933,14 +10655,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnalyticsOutputServicebusQueue",
 	}:
 		if err := (&controllersstream.AnalyticsOutputServicebusQueueReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsOutputServicebusQueue"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stream_analytics_output_servicebus_queue"],
-			TypeName: "azurerm_stream_analytics_output_servicebus_queue",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnalyticsOutputServicebusQueue"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stream_analytics_output_servicebus_queue"],
+			TypeName:         "azurerm_stream_analytics_output_servicebus_queue",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsOutputServicebusQueue")
 			return err
 		}
@@ -9950,14 +10673,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnalyticsOutputServicebusTopic",
 	}:
 		if err := (&controllersstream.AnalyticsOutputServicebusTopicReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsOutputServicebusTopic"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stream_analytics_output_servicebus_topic"],
-			TypeName: "azurerm_stream_analytics_output_servicebus_topic",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnalyticsOutputServicebusTopic"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stream_analytics_output_servicebus_topic"],
+			TypeName:         "azurerm_stream_analytics_output_servicebus_topic",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsOutputServicebusTopic")
 			return err
 		}
@@ -9967,14 +10691,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnalyticsReferenceInputBlob",
 	}:
 		if err := (&controllersstream.AnalyticsReferenceInputBlobReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsReferenceInputBlob"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stream_analytics_reference_input_blob"],
-			TypeName: "azurerm_stream_analytics_reference_input_blob",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnalyticsReferenceInputBlob"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stream_analytics_reference_input_blob"],
+			TypeName:         "azurerm_stream_analytics_reference_input_blob",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsReferenceInputBlob")
 			return err
 		}
@@ -9984,14 +10709,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnalyticsStreamInputBlob",
 	}:
 		if err := (&controllersstream.AnalyticsStreamInputBlobReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsStreamInputBlob"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stream_analytics_stream_input_blob"],
-			TypeName: "azurerm_stream_analytics_stream_input_blob",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnalyticsStreamInputBlob"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stream_analytics_stream_input_blob"],
+			TypeName:         "azurerm_stream_analytics_stream_input_blob",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsStreamInputBlob")
 			return err
 		}
@@ -10001,14 +10727,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnalyticsStreamInputEventhub",
 	}:
 		if err := (&controllersstream.AnalyticsStreamInputEventhubReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsStreamInputEventhub"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stream_analytics_stream_input_eventhub"],
-			TypeName: "azurerm_stream_analytics_stream_input_eventhub",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnalyticsStreamInputEventhub"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stream_analytics_stream_input_eventhub"],
+			TypeName:         "azurerm_stream_analytics_stream_input_eventhub",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsStreamInputEventhub")
 			return err
 		}
@@ -10018,14 +10745,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AnalyticsStreamInputIothub",
 	}:
 		if err := (&controllersstream.AnalyticsStreamInputIothubReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsStreamInputIothub"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_stream_analytics_stream_input_iothub"],
-			TypeName: "azurerm_stream_analytics_stream_input_iothub",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AnalyticsStreamInputIothub"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_stream_analytics_stream_input_iothub"],
+			TypeName:         "azurerm_stream_analytics_stream_input_iothub",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsStreamInputIothub")
 			return err
 		}
@@ -10035,14 +10763,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Subnet",
 	}:
 		if err := (&controllerssubnet.SubnetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Subnet"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_subnet"],
-			TypeName: "azurerm_subnet",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Subnet"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_subnet"],
+			TypeName:         "azurerm_subnet",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Subnet")
 			return err
 		}
@@ -10052,14 +10781,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NatGatewayAssociation",
 	}:
 		if err := (&controllerssubnet.NatGatewayAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NatGatewayAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_subnet_nat_gateway_association"],
-			TypeName: "azurerm_subnet_nat_gateway_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NatGatewayAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_subnet_nat_gateway_association"],
+			TypeName:         "azurerm_subnet_nat_gateway_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NatGatewayAssociation")
 			return err
 		}
@@ -10069,14 +10799,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NetworkSecurityGroupAssociation",
 	}:
 		if err := (&controllerssubnet.NetworkSecurityGroupAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NetworkSecurityGroupAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_subnet_network_security_group_association"],
-			TypeName: "azurerm_subnet_network_security_group_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NetworkSecurityGroupAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_subnet_network_security_group_association"],
+			TypeName:         "azurerm_subnet_network_security_group_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NetworkSecurityGroupAssociation")
 			return err
 		}
@@ -10086,14 +10817,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "RouteTableAssociation",
 	}:
 		if err := (&controllerssubnet.RouteTableAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("RouteTableAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_subnet_route_table_association"],
-			TypeName: "azurerm_subnet_route_table_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("RouteTableAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_subnet_route_table_association"],
+			TypeName:         "azurerm_subnet_route_table_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "RouteTableAssociation")
 			return err
 		}
@@ -10103,14 +10835,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServiceEndpointStoragePolicy",
 	}:
 		if err := (&controllerssubnet.ServiceEndpointStoragePolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceEndpointStoragePolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_subnet_service_endpoint_storage_policy"],
-			TypeName: "azurerm_subnet_service_endpoint_storage_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServiceEndpointStoragePolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_subnet_service_endpoint_storage_policy"],
+			TypeName:         "azurerm_subnet_service_endpoint_storage_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceEndpointStoragePolicy")
 			return err
 		}
@@ -10120,15 +10853,34 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Subscription",
 	}:
 		if err := (&controllerssubscription.SubscriptionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Subscription"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_subscription"],
-			TypeName: "azurerm_subscription",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Subscription"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_subscription"],
+			TypeName:         "azurerm_subscription",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Subscription")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "subscription.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PolicyAssignment",
+	}:
+		if err := (&controllerssubscription.PolicyAssignmentReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("PolicyAssignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_subscription_policy_assignment"],
+			TypeName:         "azurerm_subscription_policy_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "PolicyAssignment")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -10137,14 +10889,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TemplateDeployment",
 	}:
 		if err := (&controllerssubscription.TemplateDeploymentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TemplateDeployment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_subscription_template_deployment"],
-			TypeName: "azurerm_subscription_template_deployment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TemplateDeployment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_subscription_template_deployment"],
+			TypeName:         "azurerm_subscription_template_deployment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TemplateDeployment")
 			return err
 		}
@@ -10154,14 +10907,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "FirewallRule",
 	}:
 		if err := (&controllerssynapse.FirewallRuleReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("FirewallRule"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_synapse_firewall_rule"],
-			TypeName: "azurerm_synapse_firewall_rule",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("FirewallRule"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_synapse_firewall_rule"],
+			TypeName:         "azurerm_synapse_firewall_rule",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FirewallRule")
 			return err
 		}
@@ -10171,14 +10925,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ManagedPrivateEndpoint",
 	}:
 		if err := (&controllerssynapse.ManagedPrivateEndpointReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ManagedPrivateEndpoint"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_synapse_managed_private_endpoint"],
-			TypeName: "azurerm_synapse_managed_private_endpoint",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ManagedPrivateEndpoint"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_synapse_managed_private_endpoint"],
+			TypeName:         "azurerm_synapse_managed_private_endpoint",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ManagedPrivateEndpoint")
 			return err
 		}
@@ -10188,14 +10943,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "RoleAssignment",
 	}:
 		if err := (&controllerssynapse.RoleAssignmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("RoleAssignment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_synapse_role_assignment"],
-			TypeName: "azurerm_synapse_role_assignment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("RoleAssignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_synapse_role_assignment"],
+			TypeName:         "azurerm_synapse_role_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "RoleAssignment")
 			return err
 		}
@@ -10205,14 +10961,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SparkPool",
 	}:
 		if err := (&controllerssynapse.SparkPoolReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SparkPool"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_synapse_spark_pool"],
-			TypeName: "azurerm_synapse_spark_pool",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SparkPool"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_synapse_spark_pool"],
+			TypeName:         "azurerm_synapse_spark_pool",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SparkPool")
 			return err
 		}
@@ -10222,14 +10979,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "SqlPool",
 	}:
 		if err := (&controllerssynapse.SqlPoolReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("SqlPool"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_synapse_sql_pool"],
-			TypeName: "azurerm_synapse_sql_pool",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("SqlPool"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_synapse_sql_pool"],
+			TypeName:         "azurerm_synapse_sql_pool",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SqlPool")
 			return err
 		}
@@ -10239,14 +10997,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Workspace",
 	}:
 		if err := (&controllerssynapse.WorkspaceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Workspace"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_synapse_workspace"],
-			TypeName: "azurerm_synapse_workspace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Workspace"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_synapse_workspace"],
+			TypeName:         "azurerm_synapse_workspace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Workspace")
 			return err
 		}
@@ -10256,14 +11015,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Deployment",
 	}:
 		if err := (&controllerstemplate.DeploymentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Deployment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_template_deployment"],
-			TypeName: "azurerm_template_deployment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Deployment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_template_deployment"],
+			TypeName:         "azurerm_template_deployment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Deployment")
 			return err
 		}
@@ -10273,14 +11033,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "TemplateDeployment",
 	}:
 		if err := (&controllerstenant.TemplateDeploymentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("TemplateDeployment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_tenant_template_deployment"],
-			TypeName: "azurerm_tenant_template_deployment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("TemplateDeployment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_tenant_template_deployment"],
+			TypeName:         "azurerm_tenant_template_deployment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TemplateDeployment")
 			return err
 		}
@@ -10290,14 +11051,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Endpoint",
 	}:
 		if err := (&controllerstrafficmanager.EndpointReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Endpoint"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_traffic_manager_endpoint"],
-			TypeName: "azurerm_traffic_manager_endpoint",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Endpoint"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_traffic_manager_endpoint"],
+			TypeName:         "azurerm_traffic_manager_endpoint",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Endpoint")
 			return err
 		}
@@ -10307,14 +11069,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Profile",
 	}:
 		if err := (&controllerstrafficmanager.ProfileReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Profile"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_traffic_manager_profile"],
-			TypeName: "azurerm_traffic_manager_profile",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Profile"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_traffic_manager_profile"],
+			TypeName:         "azurerm_traffic_manager_profile",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Profile")
 			return err
 		}
@@ -10324,14 +11087,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "AssignedIdentity",
 	}:
 		if err := (&controllersuser.AssignedIdentityReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("AssignedIdentity"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_user_assigned_identity"],
-			TypeName: "azurerm_user_assigned_identity",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("AssignedIdentity"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_user_assigned_identity"],
+			TypeName:         "azurerm_user_assigned_identity",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AssignedIdentity")
 			return err
 		}
@@ -10341,14 +11105,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DesktopApplication",
 	}:
 		if err := (&controllersvirtual.DesktopApplicationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DesktopApplication"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_desktop_application"],
-			TypeName: "azurerm_virtual_desktop_application",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DesktopApplication"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_desktop_application"],
+			TypeName:         "azurerm_virtual_desktop_application",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DesktopApplication")
 			return err
 		}
@@ -10358,14 +11123,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DesktopApplicationGroup",
 	}:
 		if err := (&controllersvirtual.DesktopApplicationGroupReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DesktopApplicationGroup"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_desktop_application_group"],
-			TypeName: "azurerm_virtual_desktop_application_group",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DesktopApplicationGroup"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_desktop_application_group"],
+			TypeName:         "azurerm_virtual_desktop_application_group",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DesktopApplicationGroup")
 			return err
 		}
@@ -10375,14 +11141,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DesktopHostPool",
 	}:
 		if err := (&controllersvirtual.DesktopHostPoolReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DesktopHostPool"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_desktop_host_pool"],
-			TypeName: "azurerm_virtual_desktop_host_pool",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DesktopHostPool"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_desktop_host_pool"],
+			TypeName:         "azurerm_virtual_desktop_host_pool",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DesktopHostPool")
 			return err
 		}
@@ -10392,14 +11159,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DesktopWorkspace",
 	}:
 		if err := (&controllersvirtual.DesktopWorkspaceReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DesktopWorkspace"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_desktop_workspace"],
-			TypeName: "azurerm_virtual_desktop_workspace",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DesktopWorkspace"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_desktop_workspace"],
+			TypeName:         "azurerm_virtual_desktop_workspace",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DesktopWorkspace")
 			return err
 		}
@@ -10409,14 +11177,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "DesktopWorkspaceApplicationGroupAssociation",
 	}:
 		if err := (&controllersvirtual.DesktopWorkspaceApplicationGroupAssociationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("DesktopWorkspaceApplicationGroupAssociation"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_desktop_workspace_application_group_association"],
-			TypeName: "azurerm_virtual_desktop_workspace_application_group_association",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("DesktopWorkspaceApplicationGroupAssociation"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_desktop_workspace_application_group_association"],
+			TypeName:         "azurerm_virtual_desktop_workspace_application_group_association",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DesktopWorkspaceApplicationGroupAssociation")
 			return err
 		}
@@ -10426,14 +11195,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Hub",
 	}:
 		if err := (&controllersvirtual.HubReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Hub"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_hub"],
-			TypeName: "azurerm_virtual_hub",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Hub"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_hub"],
+			TypeName:         "azurerm_virtual_hub",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Hub")
 			return err
 		}
@@ -10443,14 +11213,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "HubBGPConnection",
 	}:
 		if err := (&controllersvirtual.HubBGPConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("HubBGPConnection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_hub_bgp_connection"],
-			TypeName: "azurerm_virtual_hub_bgp_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("HubBGPConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_hub_bgp_connection"],
+			TypeName:         "azurerm_virtual_hub_bgp_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "HubBGPConnection")
 			return err
 		}
@@ -10460,14 +11231,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "HubConnection",
 	}:
 		if err := (&controllersvirtual.HubConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("HubConnection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_hub_connection"],
-			TypeName: "azurerm_virtual_hub_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("HubConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_hub_connection"],
+			TypeName:         "azurerm_virtual_hub_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "HubConnection")
 			return err
 		}
@@ -10477,14 +11249,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "HubIP",
 	}:
 		if err := (&controllersvirtual.HubIPReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("HubIP"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_hub_ip"],
-			TypeName: "azurerm_virtual_hub_ip",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("HubIP"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_hub_ip"],
+			TypeName:         "azurerm_virtual_hub_ip",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "HubIP")
 			return err
 		}
@@ -10494,14 +11267,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "HubRouteTable",
 	}:
 		if err := (&controllersvirtual.HubRouteTableReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("HubRouteTable"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_hub_route_table"],
-			TypeName: "azurerm_virtual_hub_route_table",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("HubRouteTable"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_hub_route_table"],
+			TypeName:         "azurerm_virtual_hub_route_table",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "HubRouteTable")
 			return err
 		}
@@ -10511,14 +11285,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "HubSecurityPartnerProvider",
 	}:
 		if err := (&controllersvirtual.HubSecurityPartnerProviderReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("HubSecurityPartnerProvider"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_hub_security_partner_provider"],
-			TypeName: "azurerm_virtual_hub_security_partner_provider",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("HubSecurityPartnerProvider"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_hub_security_partner_provider"],
+			TypeName:         "azurerm_virtual_hub_security_partner_provider",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "HubSecurityPartnerProvider")
 			return err
 		}
@@ -10528,14 +11303,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Machine",
 	}:
 		if err := (&controllersvirtual.MachineReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Machine"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_machine"],
-			TypeName: "azurerm_virtual_machine",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Machine"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_machine"],
+			TypeName:         "azurerm_virtual_machine",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Machine")
 			return err
 		}
@@ -10545,14 +11321,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MachineConfigurationPolicyAssignment",
 	}:
 		if err := (&controllersvirtual.MachineConfigurationPolicyAssignmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MachineConfigurationPolicyAssignment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_machine_configuration_policy_assignment"],
-			TypeName: "azurerm_virtual_machine_configuration_policy_assignment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MachineConfigurationPolicyAssignment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_machine_configuration_policy_assignment"],
+			TypeName:         "azurerm_virtual_machine_configuration_policy_assignment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MachineConfigurationPolicyAssignment")
 			return err
 		}
@@ -10562,14 +11339,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MachineDataDiskAttachment",
 	}:
 		if err := (&controllersvirtual.MachineDataDiskAttachmentReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MachineDataDiskAttachment"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_machine_data_disk_attachment"],
-			TypeName: "azurerm_virtual_machine_data_disk_attachment",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MachineDataDiskAttachment"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_machine_data_disk_attachment"],
+			TypeName:         "azurerm_virtual_machine_data_disk_attachment",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MachineDataDiskAttachment")
 			return err
 		}
@@ -10579,14 +11357,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MachineExtension",
 	}:
 		if err := (&controllersvirtual.MachineExtensionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MachineExtension"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_machine_extension"],
-			TypeName: "azurerm_virtual_machine_extension",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MachineExtension"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_machine_extension"],
+			TypeName:         "azurerm_virtual_machine_extension",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MachineExtension")
 			return err
 		}
@@ -10596,14 +11375,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MachineScaleSet",
 	}:
 		if err := (&controllersvirtual.MachineScaleSetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MachineScaleSet"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_machine_scale_set"],
-			TypeName: "azurerm_virtual_machine_scale_set",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MachineScaleSet"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_machine_scale_set"],
+			TypeName:         "azurerm_virtual_machine_scale_set",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MachineScaleSet")
 			return err
 		}
@@ -10613,14 +11393,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "MachineScaleSetExtension",
 	}:
 		if err := (&controllersvirtual.MachineScaleSetExtensionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("MachineScaleSetExtension"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_machine_scale_set_extension"],
-			TypeName: "azurerm_virtual_machine_scale_set_extension",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("MachineScaleSetExtension"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_machine_scale_set_extension"],
+			TypeName:         "azurerm_virtual_machine_scale_set_extension",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "MachineScaleSetExtension")
 			return err
 		}
@@ -10630,14 +11411,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Network",
 	}:
 		if err := (&controllersvirtual.NetworkReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Network"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_network"],
-			TypeName: "azurerm_virtual_network",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Network"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_network"],
+			TypeName:         "azurerm_virtual_network",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Network")
 			return err
 		}
@@ -10647,14 +11429,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NetworkGateway",
 	}:
 		if err := (&controllersvirtual.NetworkGatewayReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NetworkGateway"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_network_gateway"],
-			TypeName: "azurerm_virtual_network_gateway",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NetworkGateway"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_network_gateway"],
+			TypeName:         "azurerm_virtual_network_gateway",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NetworkGateway")
 			return err
 		}
@@ -10664,14 +11447,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NetworkGatewayConnection",
 	}:
 		if err := (&controllersvirtual.NetworkGatewayConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NetworkGatewayConnection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_network_gateway_connection"],
-			TypeName: "azurerm_virtual_network_gateway_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NetworkGatewayConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_network_gateway_connection"],
+			TypeName:         "azurerm_virtual_network_gateway_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NetworkGatewayConnection")
 			return err
 		}
@@ -10681,14 +11465,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "NetworkPeering",
 	}:
 		if err := (&controllersvirtual.NetworkPeeringReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("NetworkPeering"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_network_peering"],
-			TypeName: "azurerm_virtual_network_peering",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("NetworkPeering"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_network_peering"],
+			TypeName:         "azurerm_virtual_network_peering",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NetworkPeering")
 			return err
 		}
@@ -10698,14 +11483,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Wan",
 	}:
 		if err := (&controllersvirtual.WanReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Wan"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_virtual_wan"],
-			TypeName: "azurerm_virtual_wan",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Wan"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_virtual_wan"],
+			TypeName:         "azurerm_virtual_wan",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Wan")
 			return err
 		}
@@ -10715,14 +11501,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Cluster",
 	}:
 		if err := (&controllersvmware.ClusterReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Cluster"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_vmware_cluster"],
-			TypeName: "azurerm_vmware_cluster",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Cluster"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_vmware_cluster"],
+			TypeName:         "azurerm_vmware_cluster",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Cluster")
 			return err
 		}
@@ -10732,14 +11519,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ExpressRouteAuthorization",
 	}:
 		if err := (&controllersvmware.ExpressRouteAuthorizationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ExpressRouteAuthorization"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_vmware_express_route_authorization"],
-			TypeName: "azurerm_vmware_express_route_authorization",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ExpressRouteAuthorization"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_vmware_express_route_authorization"],
+			TypeName:         "azurerm_vmware_express_route_authorization",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ExpressRouteAuthorization")
 			return err
 		}
@@ -10749,14 +11537,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "PrivateCloud",
 	}:
 		if err := (&controllersvmware.PrivateCloudReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("PrivateCloud"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_vmware_private_cloud"],
-			TypeName: "azurerm_vmware_private_cloud",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("PrivateCloud"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_vmware_private_cloud"],
+			TypeName:         "azurerm_vmware_private_cloud",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "PrivateCloud")
 			return err
 		}
@@ -10766,14 +11555,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Gateway",
 	}:
 		if err := (&controllersvpn.GatewayReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Gateway"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_vpn_gateway"],
-			TypeName: "azurerm_vpn_gateway",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Gateway"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_vpn_gateway"],
+			TypeName:         "azurerm_vpn_gateway",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Gateway")
 			return err
 		}
@@ -10783,14 +11573,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "GatewayConnection",
 	}:
 		if err := (&controllersvpn.GatewayConnectionReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("GatewayConnection"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_vpn_gateway_connection"],
-			TypeName: "azurerm_vpn_gateway_connection",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("GatewayConnection"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_vpn_gateway_connection"],
+			TypeName:         "azurerm_vpn_gateway_connection",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "GatewayConnection")
 			return err
 		}
@@ -10800,14 +11591,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ServerConfiguration",
 	}:
 		if err := (&controllersvpn.ServerConfigurationReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServerConfiguration"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_vpn_server_configuration"],
-			TypeName: "azurerm_vpn_server_configuration",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ServerConfiguration"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_vpn_server_configuration"],
+			TypeName:         "azurerm_vpn_server_configuration",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServerConfiguration")
 			return err
 		}
@@ -10817,14 +11609,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "Site",
 	}:
 		if err := (&controllersvpn.SiteReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("Site"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_vpn_site"],
-			TypeName: "azurerm_vpn_site",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Site"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_vpn_site"],
+			TypeName:         "azurerm_vpn_site",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Site")
 			return err
 		}
@@ -10834,14 +11627,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "ApplicationFirewallPolicy",
 	}:
 		if err := (&controllersweb.ApplicationFirewallPolicyReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ApplicationFirewallPolicy"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_web_application_firewall_policy"],
-			TypeName: "azurerm_web_application_firewall_policy",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("ApplicationFirewallPolicy"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_web_application_firewall_policy"],
+			TypeName:         "azurerm_web_application_firewall_policy",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ApplicationFirewallPolicy")
 			return err
 		}
@@ -10851,14 +11645,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualMachine",
 	}:
 		if err := (&controllerswindows.VirtualMachineReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualMachine"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_windows_virtual_machine"],
-			TypeName: "azurerm_windows_virtual_machine",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualMachine"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_windows_virtual_machine"],
+			TypeName:         "azurerm_windows_virtual_machine",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualMachine")
 			return err
 		}
@@ -10868,14 +11663,15 @@ func SetupManager(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 		Kind:    "VirtualMachineScaleSet",
 	}:
 		if err := (&controllerswindows.VirtualMachineScaleSetReconciler{
-			Client:   mgr.GetClient(),
-			Log:      ctrl.Log.WithName("controllers").WithName("VirtualMachineScaleSet"),
-			Scheme:   mgr.GetScheme(),
-			Gvk:      gvk,
-			Provider: azurerm.Provider(),
-			Resource: azurerm.Provider().ResourcesMap["azurerm_windows_virtual_machine_scale_set"],
-			TypeName: "azurerm_windows_virtual_machine_scale_set",
-		}).SetupWithManager(mgr); err != nil {
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("VirtualMachineScaleSet"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         azurerm.Provider(),
+			Resource:         azurerm.Provider().ResourcesMap["azurerm_windows_virtual_machine_scale_set"],
+			TypeName:         "azurerm_windows_virtual_machine_scale_set",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualMachineScaleSet")
 			return err
 		}
@@ -10950,6 +11746,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&apimanagementv1alpha1.ApiOperationPolicy{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ApiOperationPolicy")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ApiOperationTag",
+	}:
+		if err := (&apimanagementv1alpha1.ApiOperationTag{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ApiOperationTag")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -12143,6 +12948,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "data.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FactoryLinkedCustomService",
+	}:
+		if err := (&datav1alpha1.FactoryLinkedCustomService{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryLinkedCustomService")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "FactoryLinkedServiceAzureBlobStorage",
 	}:
 		if err := (&datav1alpha1.FactoryLinkedServiceAzureBlobStorage{}).SetupWebhookWithManager(mgr); err != nil {
@@ -12318,6 +13132,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&datav1alpha1.FactoryPipeline{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryPipeline")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FactoryTriggerBlobEvent",
+	}:
+		if err := (&datav1alpha1.FactoryTriggerBlobEvent{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryTriggerBlobEvent")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -12908,10 +13731,28 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "expressroute.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "CircuitConnection",
+	}:
+		if err := (&expressroutev1alpha1.CircuitConnection{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "CircuitConnection")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "expressroute.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "CircuitPeering",
 	}:
 		if err := (&expressroutev1alpha1.CircuitPeering{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "CircuitPeering")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "expressroute.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Connection",
+	}:
+		if err := (&expressroutev1alpha1.Connection{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Connection")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -13925,6 +14766,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "management.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "GroupPolicyAssignment",
+	}:
+		if err := (&managementv1alpha1.GroupPolicyAssignment{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "GroupPolicyAssignment")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "management.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "GroupSubscriptionAssociation",
 	}:
 		if err := (&managementv1alpha1.GroupSubscriptionAssociation{}).SetupWebhookWithManager(mgr); err != nil {
@@ -14688,6 +15538,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "portal.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "TenantConfiguration",
+	}:
+		if err := (&portalv1alpha1.TenantConfiguration{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "TenantConfiguration")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "postgresql.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "ActiveDirectoryAdministrator",
@@ -14996,10 +15855,28 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "resource.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "GroupPolicyAssignment",
+	}:
+		if err := (&resourcev1alpha1.GroupPolicyAssignment{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "GroupPolicyAssignment")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "resource.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "GroupTemplateDeployment",
 	}:
 		if err := (&resourcev1alpha1.GroupTemplateDeployment{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "GroupTemplateDeployment")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "resource.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PolicyAssignment",
+	}:
+		if err := (&resourcev1alpha1.PolicyAssignment{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PolicyAssignment")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16008,6 +16885,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&subscriptionv1alpha1.Subscription{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Subscription")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "subscription.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PolicyAssignment",
+	}:
+		if err := (&subscriptionv1alpha1.PolicyAssignment{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PolicyAssignment")
 			return err
 		}
 	case schema.GroupVersionKind{

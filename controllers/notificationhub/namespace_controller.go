@@ -23,11 +23,13 @@ import (
 
 	"github.com/go-logr/logr"
 	tfschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	auditlib "go.bytebuilders.dev/audit/lib"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 	meta_util "kmodules.xyz/client-go/meta"
 	notificationhubv1alpha1 "kubeform.dev/provider-azurerm-api/apis/notificationhub/v1alpha1"
 	"kubeform.dev/provider-azurerm-controller/controllers"
@@ -43,10 +45,11 @@ type Namespace_Reconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 
-	Gvk      schema.GroupVersionKind // GVK of the Resource
-	Provider *tfschema.Provider      // returns a *schema.Provider from the provider package
-	Resource *tfschema.Resource      // returns *schema.Resource
-	TypeName string                  // resource type
+	Gvk              schema.GroupVersionKind // GVK of the Resource
+	Provider         *tfschema.Provider      // returns a *schema.Provider from the provider package
+	Resource         *tfschema.Resource      // returns *schema.Resource
+	TypeName         string                  // resource type
+	WatchOnlyDefault bool
 }
 
 // +kubebuilder:rbac:groups=notificationhub.azurerm.kubeform.com,resources=namespace_s,verbs=get;list;watch;create;update;patch;delete
@@ -55,6 +58,10 @@ type Namespace_Reconciler struct {
 func (r *Namespace_Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("namespace_", req.NamespacedName)
 
+	if r.WatchOnlyDefault && req.Namespace != v1.NamespaceDefault {
+		log.Info("Only default namespace is supported for Kubeform Community, Please upgrade to Kubeform Enterprise to use any namespace.")
+		return ctrl.Result{}, nil
+	}
 	var unstructuredObj unstructured.Unstructured
 	unstructuredObj.SetGroupVersionKind(r.Gvk)
 
@@ -74,7 +81,14 @@ func (r *Namespace_Reconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, err
 }
 
-func (r *Namespace_Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Namespace_Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, auditor *auditlib.EventPublisher) error {
+	if auditor != nil {
+		if err := auditor.SetupWithManager(ctx, mgr, &notificationhubv1alpha1.Namespace_{}); err != nil {
+			klog.Error(err, "unable to set up auditor", notificationhubv1alpha1.Namespace_{}.APIVersion, notificationhubv1alpha1.Namespace_{}.Kind)
+			return err
+		}
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&notificationhubv1alpha1.Namespace_{}).
 		WithEventFilter(predicate.Funcs{
