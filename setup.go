@@ -4442,11 +4442,11 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "eventhub.azurerm.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Namespace_",
+		Kind:    "Namespace",
 	}:
-		if err := (&controllerseventhub.Namespace_Reconciler{
+		if err := (&controllerseventhub.NamespaceReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Namespace_"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Namespace"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         azurerm.Provider(),
@@ -4454,7 +4454,7 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName:         "azurerm_eventhub_namespace",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Namespace_")
+			setupLog.Error(err, "unable to create controller", "controller", "Namespace")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -8024,11 +8024,11 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "notificationhub.azurerm.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Namespace_",
+		Kind:    "Namespace",
 	}:
-		if err := (&controllersnotificationhub.Namespace_Reconciler{
+		if err := (&controllersnotificationhub.NamespaceReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Namespace_"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Namespace"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         azurerm.Provider(),
@@ -8036,7 +8036,7 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName:         "azurerm_notification_hub_namespace",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Namespace_")
+			setupLog.Error(err, "unable to create controller", "controller", "Namespace")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -8762,11 +8762,11 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "relay.azurerm.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Namespace_",
+		Kind:    "Namespace",
 	}:
-		if err := (&controllersrelay.Namespace_Reconciler{
+		if err := (&controllersrelay.NamespaceReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Namespace_"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Namespace"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         azurerm.Provider(),
@@ -8774,7 +8774,7 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName:         "azurerm_relay_namespace",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Namespace_")
+			setupLog.Error(err, "unable to create controller", "controller", "Namespace")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -9464,11 +9464,11 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "servicebus.azurerm.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Namespace_",
+		Kind:    "Namespace",
 	}:
-		if err := (&controllersservicebus.Namespace_Reconciler{
+		if err := (&controllersservicebus.NamespaceReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Namespace_"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Namespace"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         azurerm.Provider(),
@@ -9476,7 +9476,7 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName:         "azurerm_servicebus_namespace",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Namespace_")
+			setupLog.Error(err, "unable to create controller", "controller", "Namespace")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -13677,10 +13677,10 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "eventhub.azurerm.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Namespace_",
+		Kind:    "Namespace",
 	}:
-		if err := (&eventhubv1alpha1.Namespace_{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Namespace_")
+		if err := (&eventhubv1alpha1.Namespace{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Namespace")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -15468,10 +15468,10 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "notificationhub.azurerm.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Namespace_",
+		Kind:    "Namespace",
 	}:
-		if err := (&notificationhubv1alpha1.Namespace_{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Namespace_")
+		if err := (&notificationhubv1alpha1.Namespace{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Namespace")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -15837,10 +15837,10 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "relay.azurerm.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Namespace_",
+		Kind:    "Namespace",
 	}:
-		if err := (&relayv1alpha1.Namespace_{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Namespace_")
+		if err := (&relayv1alpha1.Namespace{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Namespace")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16188,10 +16188,10 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "servicebus.azurerm.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Namespace_",
+		Kind:    "Namespace",
 	}:
-		if err := (&servicebusv1alpha1.Namespace_{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Namespace_")
+		if err := (&servicebusv1alpha1.Namespace{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Namespace")
 			return err
 		}
 	case schema.GroupVersionKind{
