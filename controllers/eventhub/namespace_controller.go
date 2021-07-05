@@ -39,8 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// Namespace_Reconciler reconciles a Namespace_ object
-type Namespace_Reconciler struct {
+// NamespaceReconciler reconciles a Namespace object
+type NamespaceReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
@@ -52,11 +52,11 @@ type Namespace_Reconciler struct {
 	WatchOnlyDefault bool
 }
 
-// +kubebuilder:rbac:groups=eventhub.azurerm.kubeform.com,resources=namespace_s,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=eventhub.azurerm.kubeform.com,resources=namespace_s/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=eventhub.azurerm.kubeform.com,resources=namespaces,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=eventhub.azurerm.kubeform.com,resources=namespaces/status,verbs=get;update;patch
 
-func (r *Namespace_Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("namespace_", req.NamespacedName)
+func (r *NamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("namespace", req.NamespacedName)
 
 	if r.WatchOnlyDefault && req.Namespace != v1.NamespaceDefault {
 		log.Info("Only default namespace is supported for Kubeform Community, Please upgrade to Kubeform Enterprise to use any namespace.")
@@ -66,7 +66,7 @@ func (r *Namespace_Reconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	unstructuredObj.SetGroupVersionKind(r.Gvk)
 
 	if err := r.Get(ctx, req.NamespacedName, &unstructuredObj); err != nil {
-		log.Error(err, "unable to fetch Namespace_")
+		log.Error(err, "unable to fetch Namespace")
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -81,16 +81,16 @@ func (r *Namespace_Reconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, err
 }
 
-func (r *Namespace_Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, auditor *auditlib.EventPublisher) error {
+func (r *NamespaceReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, auditor *auditlib.EventPublisher) error {
 	if auditor != nil {
-		if err := auditor.SetupWithManager(ctx, mgr, &eventhubv1alpha1.Namespace_{}); err != nil {
-			klog.Error(err, "unable to set up auditor", eventhubv1alpha1.Namespace_{}.APIVersion, eventhubv1alpha1.Namespace_{}.Kind)
+		if err := auditor.SetupWithManager(ctx, mgr, &eventhubv1alpha1.Namespace{}); err != nil {
+			klog.Error(err, "unable to set up auditor", eventhubv1alpha1.Namespace{}.APIVersion, eventhubv1alpha1.Namespace{}.Kind)
 			return err
 		}
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&eventhubv1alpha1.Namespace_{}).
+		For(&eventhubv1alpha1.Namespace{}).
 		WithEventFilter(predicate.Funcs{
 			CreateFunc: func(e event.CreateEvent) bool {
 				return !meta_util.MustAlreadyReconciled(e.Object)
