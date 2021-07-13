@@ -11,6 +11,8 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.7.0
 	github.com/imdario/mergo v0.3.12
 	github.com/json-iterator/go v1.1.11
+	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/gomega v1.13.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.1.3
 	github.com/terraform-providers/terraform-provider-azurerm v1.44.1-0.20210702030130-ff3fb4ec388d
@@ -25,6 +27,7 @@ require (
 	k8s.io/client-go v0.21.1
 	k8s.io/klog/v2 v2.8.0
 	kmodules.xyz/client-go v0.0.0-20210617233340-13d22e91512b
+	kmodules.xyz/constants v0.0.0-20210218100002-2c304bfda278
 	kubeform.dev/apimachinery v0.0.0-20210629153539-7bcd34a30eb5
 	kubeform.dev/provider-azurerm-api v0.1.1-0.20210713073457-35cc9d789fa8
 	sigs.k8s.io/cli-utils v0.25.0
