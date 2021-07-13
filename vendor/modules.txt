@@ -1698,7 +1698,7 @@ kmodules.xyz/resource-metadata/pkg/graph
 # kubeform.dev/apimachinery v0.0.0-20210629153539-7bcd34a30eb5
 ## explicit
 kubeform.dev/apimachinery/api/v1alpha1
-# kubeform.dev/provider-azurerm-api v0.1.1-0.20210705204610-8cb7c39e46c0
+# kubeform.dev/provider-azurerm-api v0.1.1-0.20210713073457-35cc9d789fa8
 ## explicit
 kubeform.dev/provider-azurerm-api/api/provider
 kubeform.dev/provider-azurerm-api/apis/advanced
