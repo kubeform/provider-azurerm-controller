@@ -39,8 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// InsightsWebtestReconciler reconciles a InsightsWebtest object
-type InsightsWebtestReconciler struct {
+// InsightsWebTestReconciler reconciles a InsightsWebTest object
+type InsightsWebTestReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
@@ -55,7 +55,7 @@ type InsightsWebtestReconciler struct {
 // +kubebuilder:rbac:groups=application.azurerm.kubeform.com,resources=insightswebtests,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=application.azurerm.kubeform.com,resources=insightswebtests/status,verbs=get;update;patch
 
-func (r *InsightsWebtestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *InsightsWebTestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("insightswebtest", req.NamespacedName)
 
 	if r.WatchOnlyDefault && req.Namespace != v1.NamespaceDefault {
@@ -66,7 +66,7 @@ func (r *InsightsWebtestReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	unstructuredObj.SetGroupVersionKind(r.Gvk)
 
 	if err := r.Get(ctx, req.NamespacedName, &unstructuredObj); err != nil {
-		log.Error(err, "unable to fetch InsightsWebtest")
+		log.Error(err, "unable to fetch InsightsWebTest")
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -81,16 +81,16 @@ func (r *InsightsWebtestReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, err
 }
 
-func (r *InsightsWebtestReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, auditor *auditlib.EventPublisher) error {
+func (r *InsightsWebTestReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, auditor *auditlib.EventPublisher) error {
 	if auditor != nil {
-		if err := auditor.SetupWithManager(ctx, mgr, &applicationv1alpha1.InsightsWebtest{}); err != nil {
-			klog.Error(err, "unable to set up auditor", applicationv1alpha1.InsightsWebtest{}.APIVersion, applicationv1alpha1.InsightsWebtest{}.Kind)
+		if err := auditor.SetupWithManager(ctx, mgr, &applicationv1alpha1.InsightsWebTest{}); err != nil {
+			klog.Error(err, "unable to set up auditor", applicationv1alpha1.InsightsWebTest{}.APIVersion, applicationv1alpha1.InsightsWebTest{}.Kind)
 			return err
 		}
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&applicationv1alpha1.InsightsWebtest{}).
+		For(&applicationv1alpha1.InsightsWebTest{}).
 		WithEventFilter(predicate.Funcs{
 			CreateFunc: func(e event.CreateEvent) bool {
 				return !meta_util.MustAlreadyReconciled(e.Object)

@@ -1511,11 +1511,11 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "application.azurerm.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "InsightsWebtest",
+		Kind:    "InsightsWebTest",
 	}:
-		if err := (&controllersapplication.InsightsWebtestReconciler{
+		if err := (&controllersapplication.InsightsWebTestReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("InsightsWebtest"),
+			Log:              ctrl.Log.WithName("controllers").WithName("InsightsWebTest"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         _provider,
@@ -1523,7 +1523,7 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName:         "azurerm_application_insights_web_test",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "InsightsWebtest")
+			setupLog.Error(err, "unable to create controller", "controller", "InsightsWebTest")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -12213,10 +12213,10 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "application.azurerm.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "InsightsWebtest",
+		Kind:    "InsightsWebTest",
 	}:
-		if err := (&applicationv1alpha1.InsightsWebtest{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "InsightsWebtest")
+		if err := (&applicationv1alpha1.InsightsWebTest{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "InsightsWebTest")
 			return err
 		}
 	case schema.GroupVersionKind{
