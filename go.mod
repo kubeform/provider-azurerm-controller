@@ -7,6 +7,8 @@ require (
 	github.com/go-logr/logr v0.4.0
 	github.com/gobuffalo/flect v0.2.3
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
+	github.com/hashicorp/go-uuid v1.0.2
+	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/terraform-plugin-go v0.3.1
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.7.0
 	github.com/imdario/mergo v0.3.12
@@ -24,12 +26,13 @@ require (
 	k8s.io/api v0.21.1
 	k8s.io/apiextensions-apiserver v0.21.1
 	k8s.io/apimachinery v0.21.1
-	k8s.io/client-go v0.21.1
+	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog/v2 v2.8.0
 	kmodules.xyz/client-go v0.0.0-20210822203828-5e9cebbf1dfa
 	kmodules.xyz/constants v0.0.0-20210218100002-2c304bfda278
 	kubeform.dev/apimachinery v0.0.0-20210824104859-ba5604d5a1cc
-	kubeform.dev/provider-azurerm-api v0.3.1-0.20210824201615-fdbf52abbe07
+	kubeform.dev/provider-azurerm-api v0.3.1-0.20211020093302-39480e762496
+	kubeform.dev/terraform-backend-sdk v0.0.0-20210921060109-a6132257e095
 	sigs.k8s.io/cli-utils v0.25.0
 	sigs.k8s.io/controller-runtime v0.9.0
 )
@@ -90,7 +93,7 @@ replace github.com/prometheus/client_golang => github.com/prometheus/client_gola
 
 replace go.etcd.io/etcd => go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489
 
-replace google.golang.org/api => google.golang.org/api v0.20.0
+replace google.golang.org/api => google.golang.org/api v0.59.0
 
 replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20201110150050-8816d57aaa9a
 
