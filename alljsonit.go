@@ -149,4994 +149,4992 @@ type Data struct {
 	ResourceType string
 }
 
-var (
-	allJsonIt = map[schema.GroupVersionResource]Data{
-		{
-			Group:    "advanced.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "threatprotections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(advancedv1alpha1.GetEncoder(), advancedv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_advanced_threat_protection",
-		},
-		{
-			Group:    "analysis.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servicesservers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(analysisv1alpha1.GetEncoder(), analysisv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_analysis_services_server",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "apimanagements",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "apis",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_api",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "apidiagnostics",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_api_diagnostic",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "apioperations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_api_operation",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "apioperationpolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_api_operation_policy",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "apioperationtags",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_api_operation_tag",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "apipolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_api_policy",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "apischemas",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_api_schema",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "apiversionsets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_api_version_set",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "authorizationservers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_authorization_server",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "backends",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_backend",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "certificates",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_certificate",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "customdomains",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_custom_domain",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "diagnostics",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_diagnostic",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "emailtemplates",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_email_template",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "groups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_group",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "groupusers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_group_user",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "identityprovideraads",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_identity_provider_aad",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "identityprovideraadb2cs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_identity_provider_aadb2c",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "identityproviderfacebooks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_identity_provider_facebook",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "identityprovidergoogles",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_identity_provider_google",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "identityprovidermicrosofts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_identity_provider_microsoft",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "identityprovidertwitters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_identity_provider_twitter",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "loggers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_logger",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "namedvalues",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_named_value",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "openidconnectproviders",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_openid_connect_provider",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "policies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_policy",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "products",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_product",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "productapis",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_product_api",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "productgroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_product_group",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "productpolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_product_policy",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "properties",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_property",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "rediscaches",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_redis_cache",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "subscriptions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_subscription",
-		},
-		{
-			Group:    "apimanagement.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "users",
-		}: {
-			JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_api_management_user",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "configurations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_configuration",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "services",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serviceactiveslots",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_active_slot",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servicecertificates",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_certificate",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servicecertificatebindings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_certificate_binding",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servicecertificateorders",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_certificate_order",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servicecustomhostnamebindings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_custom_hostname_binding",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serviceenvironments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_environment",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serviceenvironmentv3s",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_environment_v3",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servicehybridconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_hybrid_connection",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servicemanagedcertificates",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_managed_certificate",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serviceplans",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_plan",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serviceslots",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_slot",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serviceslotvirtualnetworkswiftconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_slot_virtual_network_swift_connection",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servicesourcecontroltokens",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_source_control_token",
-		},
-		{
-			Group:    "app.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servicevirtualnetworkswiftconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_app_service_virtual_network_swift_connection",
-		},
-		{
-			Group:    "application.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "gateways",
-		}: {
-			JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_application_gateway",
-		},
-		{
-			Group:    "application.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "insights",
-		}: {
-			JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_application_insights",
-		},
-		{
-			Group:    "application.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "insightsanalyticsitems",
-		}: {
-			JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_application_insights_analytics_item",
-		},
-		{
-			Group:    "application.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "insightsapikeys",
-		}: {
-			JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_application_insights_api_key",
-		},
-		{
-			Group:    "application.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "insightssmartdetectionrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_application_insights_smart_detection_rule",
-		},
-		{
-			Group:    "application.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "insightswebtests",
-		}: {
-			JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_application_insights_web_test",
-		},
-		{
-			Group:    "application.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "securitygroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_application_security_group",
-		},
-		{
-			Group:    "attestation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "providers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(attestationv1alpha1.GetEncoder(), attestationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_attestation_provider",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_account",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "certificates",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_certificate",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "connections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_connection",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "connectioncertificates",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_connection_certificate",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "connectionclassiccertificates",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_connection_classic_certificate",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "connectionserviceprincipals",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_connection_service_principal",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "credentials",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_credential",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dscconfigurations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_dsc_configuration",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dscnodeconfigurations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_dsc_nodeconfiguration",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "jobschedules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_job_schedule",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "modules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_module",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "runbooks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_runbook",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "schedules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_schedule",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "variablebools",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_variable_bool",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "variabledatetimes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_variable_datetime",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "variableints",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_variable_int",
-		},
-		{
-			Group:    "automation.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "variablestrings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_automation_variable_string",
-		},
-		{
-			Group:    "availability.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(availabilityv1alpha1.GetEncoder(), availabilityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_availability_set",
-		},
-		{
-			Group:    "backup.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "containerstorageaccounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(backupv1alpha1.GetEncoder(), backupv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_backup_container_storage_account",
-		},
-		{
-			Group:    "backup.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "policyfileshares",
-		}: {
-			JsonIt:       controllers.GetJSONItr(backupv1alpha1.GetEncoder(), backupv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_backup_policy_file_share",
-		},
-		{
-			Group:    "backup.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "policyvms",
-		}: {
-			JsonIt:       controllers.GetJSONItr(backupv1alpha1.GetEncoder(), backupv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_backup_policy_vm",
-		},
-		{
-			Group:    "backup.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "protectedfileshares",
-		}: {
-			JsonIt:       controllers.GetJSONItr(backupv1alpha1.GetEncoder(), backupv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_backup_protected_file_share",
-		},
-		{
-			Group:    "backup.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "protectedvms",
-		}: {
-			JsonIt:       controllers.GetJSONItr(backupv1alpha1.GetEncoder(), backupv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_backup_protected_vm",
-		},
-		{
-			Group:    "bastion.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "hosts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(bastionv1alpha1.GetEncoder(), bastionv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_bastion_host",
-		},
-		{
-			Group:    "batch.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(batchv1alpha1.GetEncoder(), batchv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_batch_account",
-		},
-		{
-			Group:    "batch.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "applications",
-		}: {
-			JsonIt:       controllers.GetJSONItr(batchv1alpha1.GetEncoder(), batchv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_batch_application",
-		},
-		{
-			Group:    "batch.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "certificates",
-		}: {
-			JsonIt:       controllers.GetJSONItr(batchv1alpha1.GetEncoder(), batchv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_batch_certificate",
-		},
-		{
-			Group:    "batch.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "pools",
-		}: {
-			JsonIt:       controllers.GetJSONItr(batchv1alpha1.GetEncoder(), batchv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_batch_pool",
-		},
-		{
-			Group:    "blueprint.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "assignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(blueprintv1alpha1.GetEncoder(), blueprintv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_blueprint_assignment",
-		},
-		{
-			Group:    "bot.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "channeldirectlines",
-		}: {
-			JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_bot_channel_directline",
-		},
-		{
-			Group:    "bot.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "channelemails",
-		}: {
-			JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_bot_channel_email",
-		},
-		{
-			Group:    "bot.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "channelmsteams",
-		}: {
-			JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_bot_channel_ms_teams",
-		},
-		{
-			Group:    "bot.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "channelslacks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_bot_channel_slack",
-		},
-		{
-			Group:    "bot.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "channelsregistrations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_bot_channels_registration",
-		},
-		{
-			Group:    "bot.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "connections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_bot_connection",
-		},
-		{
-			Group:    "bot.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "webapps",
-		}: {
-			JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_bot_web_app",
-		},
-		{
-			Group:    "cdn.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "endpoints",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cdnv1alpha1.GetEncoder(), cdnv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cdn_endpoint",
-		},
-		{
-			Group:    "cdn.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "profiles",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cdnv1alpha1.GetEncoder(), cdnv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cdn_profile",
-		},
-		{
-			Group:    "cognitive.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cognitivev1alpha1.GetEncoder(), cognitivev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cognitive_account",
-		},
-		{
-			Group:    "communication.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "services",
-		}: {
-			JsonIt:       controllers.GetJSONItr(communicationv1alpha1.GetEncoder(), communicationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_communication_service",
-		},
-		{
-			Group:    "consumption.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "budgetresourcegroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(consumptionv1alpha1.GetEncoder(), consumptionv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_consumption_budget_resource_group",
-		},
-		{
-			Group:    "consumption.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "budgetsubscriptions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(consumptionv1alpha1.GetEncoder(), consumptionv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_consumption_budget_subscription",
-		},
-		{
-			Group:    "container.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "groups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(containerv1alpha1.GetEncoder(), containerv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_container_group",
-		},
-		{
-			Group:    "container.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "registries",
-		}: {
-			JsonIt:       controllers.GetJSONItr(containerv1alpha1.GetEncoder(), containerv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_container_registry",
-		},
-		{
-			Group:    "container.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "registryscopemaps",
-		}: {
-			JsonIt:       controllers.GetJSONItr(containerv1alpha1.GetEncoder(), containerv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_container_registry_scope_map",
-		},
-		{
-			Group:    "container.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "registrytokens",
-		}: {
-			JsonIt:       controllers.GetJSONItr(containerv1alpha1.GetEncoder(), containerv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_container_registry_token",
-		},
-		{
-			Group:    "container.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "registrywebhooks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(containerv1alpha1.GetEncoder(), containerv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_container_registry_webhook",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_account",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cassandrakeyspaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_cassandra_keyspace",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cassandratables",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_cassandra_table",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "gremlindatabases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_gremlin_database",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "gremlingraphs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_gremlin_graph",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "mongocollections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_mongo_collection",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "mongodatabases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_mongo_database",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "notebookworkspaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_notebook_workspace",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sqlcontainers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_sql_container",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sqldatabases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_sql_database",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sqlfunctions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_sql_function",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sqlstoredprocedures",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_sql_stored_procedure",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sqltriggers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_sql_trigger",
-		},
-		{
-			Group:    "cosmosdb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "tables",
-		}: {
-			JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cosmosdb_table",
-		},
-		{
-			Group:    "cost.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "managementexportresourcegroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(costv1alpha1.GetEncoder(), costv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_cost_management_export_resource_group",
-		},
-		{
-			Group:    "custom.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "providers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(customv1alpha1.GetEncoder(), customv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_custom_provider",
-		},
-		{
-			Group:    "dashboard.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dashboards",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dashboardv1alpha1.GetEncoder(), dashboardv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dashboard",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factories",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorydatasetazureblobs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_dataset_azure_blob",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorydatasetcosmosdbsqlapis",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_dataset_cosmosdb_sqlapi",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorydatasetdelimitedtexts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_dataset_delimited_text",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorydatasethttps",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_dataset_http",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorydatasetjsons",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_dataset_json",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorydatasetmysqls",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_dataset_mysql",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorydatasetparquets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_dataset_parquet",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorydatasetpostgresqls",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_dataset_postgresql",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorydatasetsnowflakes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_dataset_snowflake",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorydatasetsqlservertables",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_dataset_sql_server_table",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factoryintegrationruntimeazures",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_integration_runtime_azure",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factoryintegrationruntimeazuressis",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_integration_runtime_azure_ssis",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factoryintegrationruntimemanageds",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_integration_runtime_managed",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factoryintegrationruntimeselfhosteds",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_integration_runtime_self_hosted",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedcustomservices",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_custom_service",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedserviceazureblobstorages",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_azure_blob_storage",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedserviceazuredatabricks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_azure_databricks",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedserviceazurefilestorages",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_azure_file_storage",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedserviceazurefunctions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_azure_function",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedserviceazuresearches",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_azure_search",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedserviceazuresqldatabases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_azure_sql_database",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedserviceazuretablestorages",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_azure_table_storage",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedservicecosmosdbs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_cosmosdb",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedservicedatalakestoragegen2s",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_data_lake_storage_gen2",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedservicekeyvaults",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_key_vault",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedservicekustoes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_kusto",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedservicemysqls",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_mysql",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedserviceodata",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_odata",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedservicepostgresqls",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_postgresql",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedservicesftps",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_sftp",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedservicesnowflakes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_snowflake",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedservicesqlservers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_sql_server",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedservicesynapsis",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_synapse",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorylinkedservicewebs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_linked_service_web",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorypipelines",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_pipeline",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorytriggerblobevents",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_trigger_blob_event",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "factorytriggerschedules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_factory_trigger_schedule",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "lakeanalyticsaccounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_lake_analytics_account",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "lakeanalyticsfirewallrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_lake_analytics_firewall_rule",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "lakestores",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_lake_store",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "lakestorefiles",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_lake_store_file",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "lakestorefirewallrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_lake_store_firewall_rule",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "lakestorevirtualnetworkrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_lake_store_virtual_network_rule",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "protectionbackupinstancepostgresqls",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_protection_backup_instance_postgresql",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "protectionbackuppolicypostgresqls",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_protection_backup_policy_postgresql",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "protectionbackupvaults",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_protection_backup_vault",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "shares",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_share",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "shareaccounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_share_account",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sharedatasetblobstorages",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_share_dataset_blob_storage",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sharedatasetdatalakegen1s",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_share_dataset_data_lake_gen1",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sharedatasetdatalakegen2s",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_share_dataset_data_lake_gen2",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sharedatasetkustoclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_share_dataset_kusto_cluster",
-		},
-		{
-			Group:    "data.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sharedatasetkustodatabases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_data_share_dataset_kusto_database",
-		},
-		{
-			Group:    "database.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "migrationprojects",
-		}: {
-			JsonIt:       controllers.GetJSONItr(databasev1alpha1.GetEncoder(), databasev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_database_migration_project",
-		},
-		{
-			Group:    "database.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "migrationservices",
-		}: {
-			JsonIt:       controllers.GetJSONItr(databasev1alpha1.GetEncoder(), databasev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_database_migration_service",
-		},
-		{
-			Group:    "databox.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "edgedevices",
-		}: {
-			JsonIt:       controllers.GetJSONItr(databoxv1alpha1.GetEncoder(), databoxv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_databox_edge_device",
-		},
-		{
-			Group:    "databox.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "edgeorders",
-		}: {
-			JsonIt:       controllers.GetJSONItr(databoxv1alpha1.GetEncoder(), databoxv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_databox_edge_order",
-		},
-		{
-			Group:    "databricks.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "workspaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(databricksv1alpha1.GetEncoder(), databricksv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_databricks_workspace",
-		},
-		{
-			Group:    "dedicatedhardware.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "securitymodules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dedicatedhardwarev1alpha1.GetEncoder(), dedicatedhardwarev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dedicated_hardware_security_module",
-		},
-		{
-			Group:    "dedicatedhost.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dedicatedhosts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dedicatedhostv1alpha1.GetEncoder(), dedicatedhostv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dedicated_host",
-		},
-		{
-			Group:    "dedicatedhost.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "groups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dedicatedhostv1alpha1.GetEncoder(), dedicatedhostv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dedicated_host_group",
-		},
-		{
-			Group:    "devtest.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "globalvmshutdownschedules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dev_test_global_vm_shutdown_schedule",
-		},
-		{
-			Group:    "devtest.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "labs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dev_test_lab",
-		},
-		{
-			Group:    "devtest.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "linuxvirtualmachines",
-		}: {
-			JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dev_test_linux_virtual_machine",
-		},
-		{
-			Group:    "devtest.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "policies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dev_test_policy",
-		},
-		{
-			Group:    "devtest.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "schedules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dev_test_schedule",
-		},
-		{
-			Group:    "devtest.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualnetworks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dev_test_virtual_network",
-		},
-		{
-			Group:    "devtest.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "windowsvirtualmachines",
-		}: {
-			JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dev_test_windows_virtual_machine",
-		},
-		{
-			Group:    "devspace.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "controllers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(devspacev1alpha1.GetEncoder(), devspacev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_devspace_controller",
-		},
-		{
-			Group:    "digital.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "twinsendpointeventgrids",
-		}: {
-			JsonIt:       controllers.GetJSONItr(digitalv1alpha1.GetEncoder(), digitalv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_digital_twins_endpoint_eventgrid",
-		},
-		{
-			Group:    "digital.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "twinsendpointeventhubs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(digitalv1alpha1.GetEncoder(), digitalv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_digital_twins_endpoint_eventhub",
-		},
-		{
-			Group:    "digital.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "twinsendpointservicebus",
-		}: {
-			JsonIt:       controllers.GetJSONItr(digitalv1alpha1.GetEncoder(), digitalv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_digital_twins_endpoint_servicebus",
-		},
-		{
-			Group:    "digital.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "twinsinstances",
-		}: {
-			JsonIt:       controllers.GetJSONItr(digitalv1alpha1.GetEncoder(), digitalv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_digital_twins_instance",
-		},
-		{
-			Group:    "disk.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accesses",
-		}: {
-			JsonIt:       controllers.GetJSONItr(diskv1alpha1.GetEncoder(), diskv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_disk_access",
-		},
-		{
-			Group:    "disk.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "encryptionsets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(diskv1alpha1.GetEncoder(), diskv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_disk_encryption_set",
-		},
-		{
-			Group:    "dns.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "arecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dns_a_record",
-		},
-		{
-			Group:    "dns.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "aaaarecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dns_aaaa_record",
-		},
-		{
-			Group:    "dns.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "caarecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dns_caa_record",
-		},
-		{
-			Group:    "dns.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cnamerecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dns_cname_record",
-		},
-		{
-			Group:    "dns.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "mxrecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dns_mx_record",
-		},
-		{
-			Group:    "dns.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "nsrecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dns_ns_record",
-		},
-		{
-			Group:    "dns.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "ptrrecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dns_ptr_record",
-		},
-		{
-			Group:    "dns.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "srvrecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dns_srv_record",
-		},
-		{
-			Group:    "dns.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "txtrecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dns_txt_record",
-		},
-		{
-			Group:    "dns.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "zones",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_dns_zone",
-		},
-		{
-			Group:    "eventgrid.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "domains",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventgrid_domain",
-		},
-		{
-			Group:    "eventgrid.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "domaintopics",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventgrid_domain_topic",
-		},
-		{
-			Group:    "eventgrid.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "eventsubscriptions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventgrid_event_subscription",
-		},
-		{
-			Group:    "eventgrid.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "systemtopics",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventgrid_system_topic",
-		},
-		{
-			Group:    "eventgrid.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "systemtopiceventsubscriptions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventgrid_system_topic_event_subscription",
-		},
-		{
-			Group:    "eventgrid.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "topics",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventgrid_topic",
-		},
-		{
-			Group:    "eventhub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "eventhubs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventhub",
-		},
-		{
-			Group:    "eventhub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "authorizationrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventhub_authorization_rule",
-		},
-		{
-			Group:    "eventhub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "clusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventhub_cluster",
-		},
-		{
-			Group:    "eventhub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "consumergroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventhub_consumer_group",
-		},
-		{
-			Group:    "eventhub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "namespaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventhub_namespace",
-		},
-		{
-			Group:    "eventhub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "namespaceauthorizationrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventhub_namespace_authorization_rule",
-		},
-		{
-			Group:    "eventhub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "namespacecustomermanagedkeys",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventhub_namespace_customer_managed_key",
-		},
-		{
-			Group:    "eventhub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "namespacedisasterrecoveryconfigs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_eventhub_namespace_disaster_recovery_config",
-		},
-		{
-			Group:    "expressroute.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "circuits",
-		}: {
-			JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_express_route_circuit",
-		},
-		{
-			Group:    "expressroute.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "circuitauthorizations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_express_route_circuit_authorization",
-		},
-		{
-			Group:    "expressroute.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "circuitconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_express_route_circuit_connection",
-		},
-		{
-			Group:    "expressroute.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "circuitpeerings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_express_route_circuit_peering",
-		},
-		{
-			Group:    "expressroute.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "connections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_express_route_connection",
-		},
-		{
-			Group:    "expressroute.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "gateways",
-		}: {
-			JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_express_route_gateway",
-		},
-		{
-			Group:    "expressroute.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "ports",
-		}: {
-			JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_express_route_port",
-		},
-		{
-			Group:    "firewall.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "firewalls",
-		}: {
-			JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_firewall",
-		},
-		{
-			Group:    "firewall.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "applicationrulecollections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_firewall_application_rule_collection",
-		},
-		{
-			Group:    "firewall.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "natrulecollections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_firewall_nat_rule_collection",
-		},
-		{
-			Group:    "firewall.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "networkrulecollections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_firewall_network_rule_collection",
-		},
-		{
-			Group:    "firewall.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "policies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_firewall_policy",
-		},
-		{
-			Group:    "firewall.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "policyrulecollectiongroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_firewall_policy_rule_collection_group",
-		},
-		{
-			Group:    "frontdoor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "frontdoors",
-		}: {
-			JsonIt:       controllers.GetJSONItr(frontdoorv1alpha1.GetEncoder(), frontdoorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_frontdoor",
-		},
-		{
-			Group:    "frontdoor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "customhttpsconfigurations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(frontdoorv1alpha1.GetEncoder(), frontdoorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_frontdoor_custom_https_configuration",
-		},
-		{
-			Group:    "frontdoor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "firewallpolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(frontdoorv1alpha1.GetEncoder(), frontdoorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_frontdoor_firewall_policy",
-		},
-		{
-			Group:    "function.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "apps",
-		}: {
-			JsonIt:       controllers.GetJSONItr(functionv1alpha1.GetEncoder(), functionv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_function_app",
-		},
-		{
-			Group:    "function.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "appslots",
-		}: {
-			JsonIt:       controllers.GetJSONItr(functionv1alpha1.GetEncoder(), functionv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_function_app_slot",
-		},
-		{
-			Group:    "hdinsight.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "hadoopclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hdinsight_hadoop_cluster",
-		},
-		{
-			Group:    "hdinsight.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "hbaseclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hdinsight_hbase_cluster",
-		},
-		{
-			Group:    "hdinsight.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "interactivequeryclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hdinsight_interactive_query_cluster",
-		},
-		{
-			Group:    "hdinsight.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "kafkaclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hdinsight_kafka_cluster",
-		},
-		{
-			Group:    "hdinsight.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "mlservicesclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hdinsight_ml_services_cluster",
-		},
-		{
-			Group:    "hdinsight.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "rserverclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hdinsight_rserver_cluster",
-		},
-		{
-			Group:    "hdinsight.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sparkclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hdinsight_spark_cluster",
-		},
-		{
-			Group:    "hdinsight.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "stormclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hdinsight_storm_cluster",
-		},
-		{
-			Group:    "healthbot.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "healthbots",
-		}: {
-			JsonIt:       controllers.GetJSONItr(healthbotv1alpha1.GetEncoder(), healthbotv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_healthbot",
-		},
-		{
-			Group:    "healthcare.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "services",
-		}: {
-			JsonIt:       controllers.GetJSONItr(healthcarev1alpha1.GetEncoder(), healthcarev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_healthcare_service",
-		},
-		{
-			Group:    "hpc.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "caches",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hpcv1alpha1.GetEncoder(), hpcv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hpc_cache",
-		},
-		{
-			Group:    "hpc.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cacheaccesspolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hpcv1alpha1.GetEncoder(), hpcv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hpc_cache_access_policy",
-		},
-		{
-			Group:    "hpc.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cacheblobnfstargets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hpcv1alpha1.GetEncoder(), hpcv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hpc_cache_blob_nfs_target",
-		},
-		{
-			Group:    "hpc.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cacheblobtargets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hpcv1alpha1.GetEncoder(), hpcv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hpc_cache_blob_target",
-		},
-		{
-			Group:    "hpc.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cachenfstargets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(hpcv1alpha1.GetEncoder(), hpcv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_hpc_cache_nfs_target",
-		},
-		{
-			Group:    "image.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "images",
-		}: {
-			JsonIt:       controllers.GetJSONItr(imagev1alpha1.GetEncoder(), imagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_image",
-		},
-		{
-			Group:    "integration.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serviceenvironments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(integrationv1alpha1.GetEncoder(), integrationv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_integration_service_environment",
-		},
-		{
-			Group:    "iotsecurity.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "devicegroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iotsecurityv1alpha1.GetEncoder(), iotsecurityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iot_security_device_group",
-		},
-		{
-			Group:    "iotsecurity.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "solutions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iotsecurityv1alpha1.GetEncoder(), iotsecurityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iot_security_solution",
-		},
-		{
-			Group:    "iottime.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "seriesinsightsaccesspolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iottimev1alpha1.GetEncoder(), iottimev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iot_time_series_insights_access_policy",
-		},
-		{
-			Group:    "iottime.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "seriesinsightseventsourceiothubs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iottimev1alpha1.GetEncoder(), iottimev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iot_time_series_insights_event_source_iothub",
-		},
-		{
-			Group:    "iottime.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "seriesinsightsgen2environments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iottimev1alpha1.GetEncoder(), iottimev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iot_time_series_insights_gen2_environment",
-		},
-		{
-			Group:    "iottime.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "seriesinsightsreferencedatasets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iottimev1alpha1.GetEncoder(), iottimev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iot_time_series_insights_reference_data_set",
-		},
-		{
-			Group:    "iottime.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "seriesinsightsstandardenvironments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iottimev1alpha1.GetEncoder(), iottimev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iot_time_series_insights_standard_environment",
-		},
-		{
-			Group:    "iotcentral.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "applications",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iotcentralv1alpha1.GetEncoder(), iotcentralv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iotcentral_application",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "iothubs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "consumergroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_consumer_group",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dps",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_dps",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dpscertificates",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_dps_certificate",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dpssharedaccesspolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_dps_shared_access_policy",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "endpointeventhubs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_endpoint_eventhub",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "endpointservicebusqueues",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_endpoint_servicebus_queue",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "endpointservicebustopics",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_endpoint_servicebus_topic",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "endpointstoragecontainers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_endpoint_storage_container",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "enrichments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_enrichment",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "fallbackroutes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_fallback_route",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "routes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_route",
-		},
-		{
-			Group:    "iothub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sharedaccesspolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_iothub_shared_access_policy",
-		},
-		{
-			Group:    "ip.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "groups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(ipv1alpha1.GetEncoder(), ipv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_ip_group",
-		},
-		{
-			Group:    "keyvault.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "keyvaults",
-		}: {
-			JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_key_vault",
-		},
-		{
-			Group:    "keyvault.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accesspolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_key_vault_access_policy",
-		},
-		{
-			Group:    "keyvault.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "certificates",
-		}: {
-			JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_key_vault_certificate",
-		},
-		{
-			Group:    "keyvault.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "certificateissuers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_key_vault_certificate_issuer",
-		},
-		{
-			Group:    "keyvault.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "keys",
-		}: {
-			JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_key_vault_key",
-		},
-		{
-			Group:    "keyvault.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "managedhardwaresecuritymodules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_key_vault_managed_hardware_security_module",
-		},
-		{
-			Group:    "keyvault.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "secrets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_key_vault_secret",
-		},
-		{
-			Group:    "kubernetescluster.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "kubernetesclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kubernetesclusterv1alpha1.GetEncoder(), kubernetesclusterv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kubernetes_cluster",
-		},
-		{
-			Group:    "kubernetescluster.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "nodepools",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kubernetesclusterv1alpha1.GetEncoder(), kubernetesclusterv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kubernetes_cluster_node_pool",
-		},
-		{
-			Group:    "kusto.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "attacheddatabaseconfigurations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kusto_attached_database_configuration",
-		},
-		{
-			Group:    "kusto.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "clusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kusto_cluster",
-		},
-		{
-			Group:    "kusto.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "clustercustomermanagedkeys",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kusto_cluster_customer_managed_key",
-		},
-		{
-			Group:    "kusto.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "clusterprincipalassignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kusto_cluster_principal_assignment",
-		},
-		{
-			Group:    "kusto.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "databases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kusto_database",
-		},
-		{
-			Group:    "kusto.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "databaseprincipals",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kusto_database_principal",
-		},
-		{
-			Group:    "kusto.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "databaseprincipalassignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kusto_database_principal_assignment",
-		},
-		{
-			Group:    "kusto.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "eventgriddataconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kusto_eventgrid_data_connection",
-		},
-		{
-			Group:    "kusto.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "eventhubdataconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kusto_eventhub_data_connection",
-		},
-		{
-			Group:    "kusto.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "iothubdataconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
-			ResourceType: "azurerm_kusto_iothub_data_connection",
-		},
-		{
-			Group:    "lb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "lbs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_lb",
-		},
-		{
-			Group:    "lb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "backendaddresspools",
-		}: {
-			JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_lb_backend_address_pool",
-		},
-		{
-			Group:    "lb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "backendaddresspooladdresses",
-		}: {
-			JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_lb_backend_address_pool_address",
-		},
-		{
-			Group:    "lb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "natpools",
-		}: {
-			JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_lb_nat_pool",
-		},
-		{
-			Group:    "lb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "natrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_lb_nat_rule",
-		},
-		{
-			Group:    "lb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "outboundrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_lb_outbound_rule",
-		},
-		{
-			Group:    "lb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "probes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_lb_probe",
-		},
-		{
-			Group:    "lb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "rules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_lb_rule",
-		},
-		{
-			Group:    "lighthouse.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "assignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(lighthousev1alpha1.GetEncoder(), lighthousev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_lighthouse_assignment",
-		},
-		{
-			Group:    "lighthouse.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "definitions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(lighthousev1alpha1.GetEncoder(), lighthousev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_lighthouse_definition",
-		},
-		{
-			Group:    "linux.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualmachines",
-		}: {
-			JsonIt:       controllers.GetJSONItr(linuxv1alpha1.GetEncoder(), linuxv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_linux_virtual_machine",
-		},
-		{
-			Group:    "linux.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualmachinescalesets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(linuxv1alpha1.GetEncoder(), linuxv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_linux_virtual_machine_scale_set",
-		},
-		{
-			Group:    "local.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "networkgateways",
-		}: {
-			JsonIt:       controllers.GetJSONItr(localv1alpha1.GetEncoder(), localv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_local_network_gateway",
-		},
-		{
-			Group:    "loganalytics.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "clusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_log_analytics_cluster",
-		},
-		{
-			Group:    "loganalytics.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "clustercustomermanagedkeys",
-		}: {
-			JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_log_analytics_cluster_customer_managed_key",
-		},
-		{
-			Group:    "loganalytics.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dataexportrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_log_analytics_data_export_rule",
-		},
-		{
-			Group:    "loganalytics.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "datasourcewindowsevents",
-		}: {
-			JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_log_analytics_datasource_windows_event",
-		},
-		{
-			Group:    "loganalytics.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "datasourcewindowsperformancecounters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_log_analytics_datasource_windows_performance_counter",
-		},
-		{
-			Group:    "loganalytics.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "linkedservices",
-		}: {
-			JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_log_analytics_linked_service",
-		},
-		{
-			Group:    "loganalytics.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "linkedstorageaccounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_log_analytics_linked_storage_account",
-		},
-		{
-			Group:    "loganalytics.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "savedsearches",
-		}: {
-			JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_log_analytics_saved_search",
-		},
-		{
-			Group:    "loganalytics.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "solutions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_log_analytics_solution",
-		},
-		{
-			Group:    "loganalytics.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "storageinsights",
-		}: {
-			JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_log_analytics_storage_insights",
-		},
-		{
-			Group:    "loganalytics.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "workspaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_log_analytics_workspace",
-		},
-		{
-			Group:    "logicapp.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "actioncustoms",
-		}: {
-			JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_logic_app_action_custom",
-		},
-		{
-			Group:    "logicapp.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "actionhttps",
-		}: {
-			JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_logic_app_action_http",
-		},
-		{
-			Group:    "logicapp.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "integrationaccounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_logic_app_integration_account",
-		},
-		{
-			Group:    "logicapp.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "triggercustoms",
-		}: {
-			JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_logic_app_trigger_custom",
-		},
-		{
-			Group:    "logicapp.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "triggerhttprequests",
-		}: {
-			JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_logic_app_trigger_http_request",
-		},
-		{
-			Group:    "logicapp.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "triggerrecurrences",
-		}: {
-			JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_logic_app_trigger_recurrence",
-		},
-		{
-			Group:    "logicapp.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "workflows",
-		}: {
-			JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_logic_app_workflow",
-		},
-		{
-			Group:    "machine.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "learningcomputeclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(machinev1alpha1.GetEncoder(), machinev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_machine_learning_compute_cluster",
-		},
-		{
-			Group:    "machine.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "learninginferenceclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(machinev1alpha1.GetEncoder(), machinev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_machine_learning_inference_cluster",
-		},
-		{
-			Group:    "machine.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "learningworkspaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(machinev1alpha1.GetEncoder(), machinev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_machine_learning_workspace",
-		},
-		{
-			Group:    "maintenance.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "assignmentdedicatedhosts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(maintenancev1alpha1.GetEncoder(), maintenancev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_maintenance_assignment_dedicated_host",
-		},
-		{
-			Group:    "maintenance.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "assignmentvirtualmachines",
-		}: {
-			JsonIt:       controllers.GetJSONItr(maintenancev1alpha1.GetEncoder(), maintenancev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_maintenance_assignment_virtual_machine",
-		},
-		{
-			Group:    "maintenance.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "configurations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(maintenancev1alpha1.GetEncoder(), maintenancev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_maintenance_configuration",
-		},
-		{
-			Group:    "managed.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "applications",
-		}: {
-			JsonIt:       controllers.GetJSONItr(managedv1alpha1.GetEncoder(), managedv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_managed_application",
-		},
-		{
-			Group:    "managed.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "applicationdefinitions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(managedv1alpha1.GetEncoder(), managedv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_managed_application_definition",
-		},
-		{
-			Group:    "managed.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "disks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(managedv1alpha1.GetEncoder(), managedv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_managed_disk",
-		},
-		{
-			Group:    "management.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "groups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(managementv1alpha1.GetEncoder(), managementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_management_group",
-		},
-		{
-			Group:    "management.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "grouppolicyassignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(managementv1alpha1.GetEncoder(), managementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_management_group_policy_assignment",
-		},
-		{
-			Group:    "management.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "groupsubscriptionassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(managementv1alpha1.GetEncoder(), managementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_management_group_subscription_association",
-		},
-		{
-			Group:    "management.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "grouptemplatedeployments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(managementv1alpha1.GetEncoder(), managementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_management_group_template_deployment",
-		},
-		{
-			Group:    "management.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "locks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(managementv1alpha1.GetEncoder(), managementv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_management_lock",
-		},
-		{
-			Group:    "maps.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mapsv1alpha1.GetEncoder(), mapsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_maps_account",
-		},
-		{
-			Group:    "mariadb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "configurations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mariadbv1alpha1.GetEncoder(), mariadbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mariadb_configuration",
-		},
-		{
-			Group:    "mariadb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "databases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mariadbv1alpha1.GetEncoder(), mariadbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mariadb_database",
-		},
-		{
-			Group:    "mariadb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "firewallrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mariadbv1alpha1.GetEncoder(), mariadbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mariadb_firewall_rule",
-		},
-		{
-			Group:    "mariadb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mariadbv1alpha1.GetEncoder(), mariadbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mariadb_server",
-		},
-		{
-			Group:    "mariadb.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualnetworkrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mariadbv1alpha1.GetEncoder(), mariadbv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mariadb_virtual_network_rule",
-		},
-		{
-			Group:    "marketplace.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "agreements",
-		}: {
-			JsonIt:       controllers.GetJSONItr(marketplacev1alpha1.GetEncoder(), marketplacev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_marketplace_agreement",
-		},
-		{
-			Group:    "media.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "assets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_media_asset",
-		},
-		{
-			Group:    "media.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "assetfilters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_media_asset_filter",
-		},
-		{
-			Group:    "media.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "contentkeypolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_media_content_key_policy",
-		},
-		{
-			Group:    "media.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "jobs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_media_job",
-		},
-		{
-			Group:    "media.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "liveevents",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_media_live_event",
-		},
-		{
-			Group:    "media.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "liveeventoutputs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_media_live_event_output",
-		},
-		{
-			Group:    "media.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servicesaccounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_media_services_account",
-		},
-		{
-			Group:    "media.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "streamingendpoints",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_media_streaming_endpoint",
-		},
-		{
-			Group:    "media.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "streaminglocators",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_media_streaming_locator",
-		},
-		{
-			Group:    "media.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "streamingpolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_media_streaming_policy",
-		},
-		{
-			Group:    "media.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "transforms",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
-			ResourceType: "azurerm_media_transform",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "aaddiagnosticsettings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_aad_diagnostic_setting",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "actiongroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_action_group",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "actionruleactiongroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_action_rule_action_group",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "actionrulesuppressions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_action_rule_suppression",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "activitylogalerts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_activity_log_alert",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "autoscalesettings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_autoscale_setting",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "diagnosticsettings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_diagnostic_setting",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "logprofiles",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_log_profile",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "metricalerts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_metric_alert",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "scheduledqueryrulesalerts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_scheduled_query_rules_alert",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "scheduledqueryruleslogs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_scheduled_query_rules_log",
-		},
-		{
-			Group:    "monitor.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "smartdetectoralertrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_monitor_smart_detector_alert_rule",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "databases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_database",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "databaseextendedauditingpolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_database_extended_auditing_policy",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "databasevulnerabilityassessmentrulebaselines",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_database_vulnerability_assessment_rule_baseline",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "elasticpools",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_elasticpool",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "firewallrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_firewall_rule",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "jobagents",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_job_agent",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "jobcredentials",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_job_credential",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_server",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serverextendedauditingpolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_server_extended_auditing_policy",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serversecurityalertpolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_server_security_alert_policy",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servertransparentdataencryptions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_server_transparent_data_encryption",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servervulnerabilityassessments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_server_vulnerability_assessment",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualmachines",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_virtual_machine",
-		},
-		{
-			Group:    "mssql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualnetworkrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mssql_virtual_network_rule",
-		},
-		{
-			Group:    "mysql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "activedirectoryadministrators",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mysql_active_directory_administrator",
-		},
-		{
-			Group:    "mysql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "configurations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mysql_configuration",
-		},
-		{
-			Group:    "mysql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "databases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mysql_database",
-		},
-		{
-			Group:    "mysql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "firewallrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mysql_firewall_rule",
-		},
-		{
-			Group:    "mysql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mysql_server",
-		},
-		{
-			Group:    "mysql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serverkeys",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mysql_server_key",
-		},
-		{
-			Group:    "mysql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualnetworkrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_mysql_virtual_network_rule",
-		},
-		{
-			Group:    "nat.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "gateways",
-		}: {
-			JsonIt:       controllers.GetJSONItr(natv1alpha1.GetEncoder(), natv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_nat_gateway",
-		},
-		{
-			Group:    "nat.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "gatewaypublicipassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(natv1alpha1.GetEncoder(), natv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_nat_gateway_public_ip_association",
-		},
-		{
-			Group:    "nat.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "gatewaypublicipprefixassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(natv1alpha1.GetEncoder(), natv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_nat_gateway_public_ip_prefix_association",
-		},
-		{
-			Group:    "netapp.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(netappv1alpha1.GetEncoder(), netappv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_netapp_account",
-		},
-		{
-			Group:    "netapp.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "pools",
-		}: {
-			JsonIt:       controllers.GetJSONItr(netappv1alpha1.GetEncoder(), netappv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_netapp_pool",
-		},
-		{
-			Group:    "netapp.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "snapshots",
-		}: {
-			JsonIt:       controllers.GetJSONItr(netappv1alpha1.GetEncoder(), netappv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_netapp_snapshot",
-		},
-		{
-			Group:    "netapp.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "volumes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(netappv1alpha1.GetEncoder(), netappv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_netapp_volume",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "connectionmonitors",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_connection_monitor",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "ddosprotectionplans",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_ddos_protection_plan",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "interfaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_interface",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "interfaceapplicationgatewaybackendaddresspoolassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_interface_application_gateway_backend_address_pool_association",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "interfaceapplicationsecuritygroupassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_interface_application_security_group_association",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "interfacebackendaddresspoolassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_interface_backend_address_pool_association",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "interfacenatruleassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_interface_nat_rule_association",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "interfacesecuritygroupassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_interface_security_group_association",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "packetcaptures",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_packet_capture",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "profiles",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_profile",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "securitygroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_security_group",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "securityrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_security_rule",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "watchers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_watcher",
-		},
-		{
-			Group:    "network.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "watcherflowlogs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_network_watcher_flow_log",
-		},
-		{
-			Group:    "notificationhub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "notificationhubs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(notificationhubv1alpha1.GetEncoder(), notificationhubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_notification_hub",
-		},
-		{
-			Group:    "notificationhub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "authorizationrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(notificationhubv1alpha1.GetEncoder(), notificationhubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_notification_hub_authorization_rule",
-		},
-		{
-			Group:    "notificationhub.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "namespaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(notificationhubv1alpha1.GetEncoder(), notificationhubv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_notification_hub_namespace",
-		},
-		{
-			Group:    "orchestrated.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualmachinescalesets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(orchestratedv1alpha1.GetEncoder(), orchestratedv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_orchestrated_virtual_machine_scale_set",
-		},
-		{
-			Group:    "packet.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "captures",
-		}: {
-			JsonIt:       controllers.GetJSONItr(packetv1alpha1.GetEncoder(), packetv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_packet_capture",
-		},
-		{
-			Group:    "point.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "tositevpngateways",
-		}: {
-			JsonIt:       controllers.GetJSONItr(pointv1alpha1.GetEncoder(), pointv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_point_to_site_vpn_gateway",
-		},
-		{
-			Group:    "policy.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "assignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(policyv1alpha1.GetEncoder(), policyv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_policy_assignment",
-		},
-		{
-			Group:    "policy.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "definitions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(policyv1alpha1.GetEncoder(), policyv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_policy_definition",
-		},
-		{
-			Group:    "policy.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "remediations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(policyv1alpha1.GetEncoder(), policyv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_policy_remediation",
-		},
-		{
-			Group:    "policy.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "setdefinitions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(policyv1alpha1.GetEncoder(), policyv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_policy_set_definition",
-		},
-		{
-			Group:    "portal.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "tenantconfigurations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(portalv1alpha1.GetEncoder(), portalv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_portal_tenant_configuration",
-		},
-		{
-			Group:    "postgresql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "activedirectoryadministrators",
-		}: {
-			JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_postgresql_active_directory_administrator",
-		},
-		{
-			Group:    "postgresql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "configurations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_postgresql_configuration",
-		},
-		{
-			Group:    "postgresql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "databases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_postgresql_database",
-		},
-		{
-			Group:    "postgresql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "firewallrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_postgresql_firewall_rule",
-		},
-		{
-			Group:    "postgresql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "flexibleservers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_postgresql_flexible_server",
-		},
-		{
-			Group:    "postgresql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "flexibleserverfirewallrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_postgresql_flexible_server_firewall_rule",
-		},
-		{
-			Group:    "postgresql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_postgresql_server",
-		},
-		{
-			Group:    "postgresql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serverkeys",
-		}: {
-			JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_postgresql_server_key",
-		},
-		{
-			Group:    "postgresql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualnetworkrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_postgresql_virtual_network_rule",
-		},
-		{
-			Group:    "powerbi.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "embeddeds",
-		}: {
-			JsonIt:       controllers.GetJSONItr(powerbiv1alpha1.GetEncoder(), powerbiv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_powerbi_embedded",
-		},
-		{
-			Group:    "private.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dnsarecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_private_dns_a_record",
-		},
-		{
-			Group:    "private.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dnsaaaarecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_private_dns_aaaa_record",
-		},
-		{
-			Group:    "private.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dnscnamerecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_private_dns_cname_record",
-		},
-		{
-			Group:    "private.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dnsmxrecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_private_dns_mx_record",
-		},
-		{
-			Group:    "private.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dnsptrrecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_private_dns_ptr_record",
-		},
-		{
-			Group:    "private.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dnssrvrecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_private_dns_srv_record",
-		},
-		{
-			Group:    "private.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dnstxtrecords",
-		}: {
-			JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_private_dns_txt_record",
-		},
-		{
-			Group:    "private.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dnszones",
-		}: {
-			JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_private_dns_zone",
-		},
-		{
-			Group:    "private.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dnszonevirtualnetworklinks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_private_dns_zone_virtual_network_link",
-		},
-		{
-			Group:    "private.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "endpoints",
-		}: {
-			JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_private_endpoint",
-		},
-		{
-			Group:    "private.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "linkservices",
-		}: {
-			JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_private_link_service",
-		},
-		{
-			Group:    "proximity.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "placementgroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(proximityv1alpha1.GetEncoder(), proximityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_proximity_placement_group",
-		},
-		{
-			Group:    "publicip.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "publicips",
-		}: {
-			JsonIt:       controllers.GetJSONItr(publicipv1alpha1.GetEncoder(), publicipv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_public_ip",
-		},
-		{
-			Group:    "publicip.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "prefixes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(publicipv1alpha1.GetEncoder(), publicipv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_public_ip_prefix",
-		},
-		{
-			Group:    "purview.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(purviewv1alpha1.GetEncoder(), purviewv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_purview_account",
-		},
-		{
-			Group:    "recovery.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servicesvaults",
-		}: {
-			JsonIt:       controllers.GetJSONItr(recoveryv1alpha1.GetEncoder(), recoveryv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_recovery_services_vault",
-		},
-		{
-			Group:    "redis.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "caches",
-		}: {
-			JsonIt:       controllers.GetJSONItr(redisv1alpha1.GetEncoder(), redisv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_redis_cache",
-		},
-		{
-			Group:    "redis.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "enterpriseclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(redisv1alpha1.GetEncoder(), redisv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_redis_enterprise_cluster",
-		},
-		{
-			Group:    "redis.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "enterprisedatabases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(redisv1alpha1.GetEncoder(), redisv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_redis_enterprise_database",
-		},
-		{
-			Group:    "redis.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "firewallrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(redisv1alpha1.GetEncoder(), redisv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_redis_firewall_rule",
-		},
-		{
-			Group:    "redis.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "linkedservers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(redisv1alpha1.GetEncoder(), redisv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_redis_linked_server",
-		},
-		{
-			Group:    "relay.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "hybridconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(relayv1alpha1.GetEncoder(), relayv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_relay_hybrid_connection",
-		},
-		{
-			Group:    "relay.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "namespaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(relayv1alpha1.GetEncoder(), relayv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_relay_namespace",
-		},
-		{
-			Group:    "resource.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "groups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(resourcev1alpha1.GetEncoder(), resourcev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_resource_group",
-		},
-		{
-			Group:    "resource.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "grouppolicyassignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(resourcev1alpha1.GetEncoder(), resourcev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_resource_group_policy_assignment",
-		},
-		{
-			Group:    "resource.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "grouptemplatedeployments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(resourcev1alpha1.GetEncoder(), resourcev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_resource_group_template_deployment",
-		},
-		{
-			Group:    "resource.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "policyassignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(resourcev1alpha1.GetEncoder(), resourcev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_resource_policy_assignment",
-		},
-		{
-			Group:    "resource.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "providerregistrations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(resourcev1alpha1.GetEncoder(), resourcev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_resource_provider_registration",
-		},
-		{
-			Group:    "role.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "assignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(rolev1alpha1.GetEncoder(), rolev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_role_assignment",
-		},
-		{
-			Group:    "role.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "definitions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(rolev1alpha1.GetEncoder(), rolev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_role_definition",
-		},
-		{
-			Group:    "route.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "routes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(routev1alpha1.GetEncoder(), routev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_route",
-		},
-		{
-			Group:    "route.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "filters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(routev1alpha1.GetEncoder(), routev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_route_filter",
-		},
-		{
-			Group:    "route.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "tables",
-		}: {
-			JsonIt:       controllers.GetJSONItr(routev1alpha1.GetEncoder(), routev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_route_table",
-		},
-		{
-			Group:    "search.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "services",
-		}: {
-			JsonIt:       controllers.GetJSONItr(searchv1alpha1.GetEncoder(), searchv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_search_service",
-		},
-		{
-			Group:    "security.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "centerassessments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_security_center_assessment",
-		},
-		{
-			Group:    "security.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "centerassessmentmetadata",
-		}: {
-			JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_security_center_assessment_metadata",
-		},
-		{
-			Group:    "security.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "centerassessmentpolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_security_center_assessment_policy",
-		},
-		{
-			Group:    "security.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "centerautoprovisionings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_security_center_auto_provisioning",
-		},
-		{
-			Group:    "security.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "centerautomations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_security_center_automation",
-		},
-		{
-			Group:    "security.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "centercontacts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_security_center_contact",
-		},
-		{
-			Group:    "security.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "centerservervulnerabilityassessments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_security_center_server_vulnerability_assessment",
-		},
-		{
-			Group:    "security.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "centersettings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_security_center_setting",
-		},
-		{
-			Group:    "security.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "centersubscriptionpricings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_security_center_subscription_pricing",
-		},
-		{
-			Group:    "security.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "centerworkspaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_security_center_workspace",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "alertrulefusions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_alert_rule_fusion",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "alertrulemachinelearningbehavioranalytics",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_alert_rule_machine_learning_behavior_analytics",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "alertrulemssecurityincidents",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_alert_rule_ms_security_incident",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "alertrulescheduleds",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_alert_rule_scheduled",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dataconnectorawscloudtrails",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_data_connector_aws_cloud_trail",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dataconnectorazureactivedirectories",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_data_connector_azure_active_directory",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dataconnectorazureadvancedthreatprotections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_data_connector_azure_advanced_threat_protection",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dataconnectorazuresecuritycenters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_data_connector_azure_security_center",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dataconnectormicrosoftcloudappsecurities",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_data_connector_microsoft_cloud_app_security",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dataconnectormicrosoftdefenderadvancedthreatprotections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_data_connector_microsoft_defender_advanced_threat_protection",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dataconnectoroffice365s",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_data_connector_office_365",
-		},
-		{
-			Group:    "sentinel.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dataconnectorthreatintelligences",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sentinel_data_connector_threat_intelligence",
-		},
-		{
-			Group:    "service.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "fabricclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicev1alpha1.GetEncoder(), servicev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_service_fabric_cluster",
-		},
-		{
-			Group:    "service.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "fabricmeshapplications",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicev1alpha1.GetEncoder(), servicev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_service_fabric_mesh_application",
-		},
-		{
-			Group:    "service.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "fabricmeshlocalnetworks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicev1alpha1.GetEncoder(), servicev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_service_fabric_mesh_local_network",
-		},
-		{
-			Group:    "service.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "fabricmeshsecrets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicev1alpha1.GetEncoder(), servicev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_service_fabric_mesh_secret",
-		},
-		{
-			Group:    "service.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "fabricmeshsecretvalues",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicev1alpha1.GetEncoder(), servicev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_service_fabric_mesh_secret_value",
-		},
-		{
-			Group:    "servicebus.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "namespaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_servicebus_namespace",
-		},
-		{
-			Group:    "servicebus.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "namespaceauthorizationrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_servicebus_namespace_authorization_rule",
-		},
-		{
-			Group:    "servicebus.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "namespacedisasterrecoveryconfigs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_servicebus_namespace_disaster_recovery_config",
-		},
-		{
-			Group:    "servicebus.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "namespacenetworkrulesets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_servicebus_namespace_network_rule_set",
-		},
-		{
-			Group:    "servicebus.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "queues",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_servicebus_queue",
-		},
-		{
-			Group:    "servicebus.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "queueauthorizationrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_servicebus_queue_authorization_rule",
-		},
-		{
-			Group:    "servicebus.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "subscriptions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_servicebus_subscription",
-		},
-		{
-			Group:    "servicebus.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "subscriptionrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_servicebus_subscription_rule",
-		},
-		{
-			Group:    "servicebus.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "topics",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_servicebus_topic",
-		},
-		{
-			Group:    "servicebus.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "topicauthorizationrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_servicebus_topic_authorization_rule",
-		},
-		{
-			Group:    "sharedimage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sharedimages",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sharedimagev1alpha1.GetEncoder(), sharedimagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_shared_image",
-		},
-		{
-			Group:    "sharedimage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "galleries",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sharedimagev1alpha1.GetEncoder(), sharedimagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_shared_image_gallery",
-		},
-		{
-			Group:    "sharedimage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "versions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sharedimagev1alpha1.GetEncoder(), sharedimagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_shared_image_version",
-		},
-		{
-			Group:    "signalr.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "services",
-		}: {
-			JsonIt:       controllers.GetJSONItr(signalrv1alpha1.GetEncoder(), signalrv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_signalr_service",
-		},
-		{
-			Group:    "siterecovery.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "fabrics",
-		}: {
-			JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_site_recovery_fabric",
-		},
-		{
-			Group:    "siterecovery.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "networkmappings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_site_recovery_network_mapping",
-		},
-		{
-			Group:    "siterecovery.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "protectioncontainers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_site_recovery_protection_container",
-		},
-		{
-			Group:    "siterecovery.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "protectioncontainermappings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_site_recovery_protection_container_mapping",
-		},
-		{
-			Group:    "siterecovery.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "replicatedvms",
-		}: {
-			JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_site_recovery_replicated_vm",
-		},
-		{
-			Group:    "siterecovery.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "replicationpolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_site_recovery_replication_policy",
-		},
-		{
-			Group:    "snapshot.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "snapshots",
-		}: {
-			JsonIt:       controllers.GetJSONItr(snapshotv1alpha1.GetEncoder(), snapshotv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_snapshot",
-		},
-		{
-			Group:    "spatial.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "anchorsaccounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(spatialv1alpha1.GetEncoder(), spatialv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_spatial_anchors_account",
-		},
-		{
-			Group:    "spring.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cloudactivedeployments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_spring_cloud_active_deployment",
-		},
-		{
-			Group:    "spring.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cloudapps",
-		}: {
-			JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_spring_cloud_app",
-		},
-		{
-			Group:    "spring.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cloudappcosmosdbassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_spring_cloud_app_cosmosdb_association",
-		},
-		{
-			Group:    "spring.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cloudappmysqlassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_spring_cloud_app_mysql_association",
-		},
-		{
-			Group:    "spring.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cloudappredisassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_spring_cloud_app_redis_association",
-		},
-		{
-			Group:    "spring.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cloudcertificates",
-		}: {
-			JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_spring_cloud_certificate",
-		},
-		{
-			Group:    "spring.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cloudcustomdomains",
-		}: {
-			JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_spring_cloud_custom_domain",
-		},
-		{
-			Group:    "spring.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cloudjavadeployments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_spring_cloud_java_deployment",
-		},
-		{
-			Group:    "spring.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "cloudservices",
-		}: {
-			JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_spring_cloud_service",
-		},
-		{
-			Group:    "sql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "activedirectoryadministrators",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sql_active_directory_administrator",
-		},
-		{
-			Group:    "sql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "databases",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sql_database",
-		},
-		{
-			Group:    "sql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "elasticpools",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sql_elasticpool",
-		},
-		{
-			Group:    "sql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "failovergroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sql_failover_group",
-		},
-		{
-			Group:    "sql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "firewallrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sql_firewall_rule",
-		},
-		{
-			Group:    "sql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "servers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sql_server",
-		},
-		{
-			Group:    "sql.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualnetworkrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_sql_virtual_network_rule",
-		},
-		{
-			Group:    "ssh.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "publickeys",
-		}: {
-			JsonIt:       controllers.GetJSONItr(sshv1alpha1.GetEncoder(), sshv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_ssh_public_key",
-		},
-		{
-			Group:    "stack.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "hciclusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(stackv1alpha1.GetEncoder(), stackv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stack_hci_cluster",
-		},
-		{
-			Group:    "static.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sites",
-		}: {
-			JsonIt:       controllers.GetJSONItr(staticv1alpha1.GetEncoder(), staticv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_static_site",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accounts",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_account",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accountcustomermanagedkeys",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_account_customer_managed_key",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "accountnetworkrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_account_network_rules",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "blobs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_blob",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "blobinventorypolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_blob_inventory_policy",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "containers",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_container",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "datalakegen2filesystems",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_data_lake_gen2_filesystem",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "datalakegen2paths",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_data_lake_gen2_path",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "encryptionscopes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_encryption_scope",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "managementpolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_management_policy",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "objectreplications",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_object_replication",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "queues",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_queue",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "shares",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_share",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sharedirectories",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_share_directory",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sharefiles",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_share_file",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "syncs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_sync",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "synccloudendpoints",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_sync_cloud_endpoint",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "syncgroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_sync_group",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "tables",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_table",
-		},
-		{
-			Group:    "storage.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "tableentities",
-		}: {
-			JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_storage_table_entity",
-		},
-		{
-			Group:    "stream.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "analyticsfunctionjavascriptudfs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stream_analytics_function_javascript_udf",
-		},
-		{
-			Group:    "stream.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "analyticsjobs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stream_analytics_job",
-		},
-		{
-			Group:    "stream.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "analyticsoutputblobs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stream_analytics_output_blob",
-		},
-		{
-			Group:    "stream.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "analyticsoutputeventhubs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stream_analytics_output_eventhub",
-		},
-		{
-			Group:    "stream.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "analyticsoutputmssqls",
-		}: {
-			JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stream_analytics_output_mssql",
-		},
-		{
-			Group:    "stream.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "analyticsoutputservicebusqueues",
-		}: {
-			JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stream_analytics_output_servicebus_queue",
-		},
-		{
-			Group:    "stream.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "analyticsoutputservicebustopics",
-		}: {
-			JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stream_analytics_output_servicebus_topic",
-		},
-		{
-			Group:    "stream.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "analyticsreferenceinputblobs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stream_analytics_reference_input_blob",
-		},
-		{
-			Group:    "stream.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "analyticsstreaminputblobs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stream_analytics_stream_input_blob",
-		},
-		{
-			Group:    "stream.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "analyticsstreaminputeventhubs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stream_analytics_stream_input_eventhub",
-		},
-		{
-			Group:    "stream.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "analyticsstreaminputiothubs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_stream_analytics_stream_input_iothub",
-		},
-		{
-			Group:    "subnet.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "subnets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(subnetv1alpha1.GetEncoder(), subnetv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_subnet",
-		},
-		{
-			Group:    "subnet.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "natgatewayassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(subnetv1alpha1.GetEncoder(), subnetv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_subnet_nat_gateway_association",
-		},
-		{
-			Group:    "subnet.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "networksecuritygroupassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(subnetv1alpha1.GetEncoder(), subnetv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_subnet_network_security_group_association",
-		},
-		{
-			Group:    "subnet.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "routetableassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(subnetv1alpha1.GetEncoder(), subnetv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_subnet_route_table_association",
-		},
-		{
-			Group:    "subnet.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serviceendpointstoragepolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(subnetv1alpha1.GetEncoder(), subnetv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_subnet_service_endpoint_storage_policy",
-		},
-		{
-			Group:    "subscription.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "subscriptions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(subscriptionv1alpha1.GetEncoder(), subscriptionv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_subscription",
-		},
-		{
-			Group:    "subscription.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "policyassignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(subscriptionv1alpha1.GetEncoder(), subscriptionv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_subscription_policy_assignment",
-		},
-		{
-			Group:    "subscription.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "templatedeployments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(subscriptionv1alpha1.GetEncoder(), subscriptionv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_subscription_template_deployment",
-		},
-		{
-			Group:    "synapse.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "firewallrules",
-		}: {
-			JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_synapse_firewall_rule",
-		},
-		{
-			Group:    "synapse.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "managedprivateendpoints",
-		}: {
-			JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_synapse_managed_private_endpoint",
-		},
-		{
-			Group:    "synapse.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "roleassignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_synapse_role_assignment",
-		},
-		{
-			Group:    "synapse.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sparkpools",
-		}: {
-			JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_synapse_spark_pool",
-		},
-		{
-			Group:    "synapse.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sqlpools",
-		}: {
-			JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_synapse_sql_pool",
-		},
-		{
-			Group:    "synapse.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "workspaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_synapse_workspace",
-		},
-		{
-			Group:    "template.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "deployments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(templatev1alpha1.GetEncoder(), templatev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_template_deployment",
-		},
-		{
-			Group:    "tenant.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "templatedeployments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(tenantv1alpha1.GetEncoder(), tenantv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_tenant_template_deployment",
-		},
-		{
-			Group:    "trafficmanager.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "endpoints",
-		}: {
-			JsonIt:       controllers.GetJSONItr(trafficmanagerv1alpha1.GetEncoder(), trafficmanagerv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_traffic_manager_endpoint",
-		},
-		{
-			Group:    "trafficmanager.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "profiles",
-		}: {
-			JsonIt:       controllers.GetJSONItr(trafficmanagerv1alpha1.GetEncoder(), trafficmanagerv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_traffic_manager_profile",
-		},
-		{
-			Group:    "user.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "assignedidentities",
-		}: {
-			JsonIt:       controllers.GetJSONItr(userv1alpha1.GetEncoder(), userv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_user_assigned_identity",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "desktopapplications",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_desktop_application",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "desktopapplicationgroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_desktop_application_group",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "desktophostpools",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_desktop_host_pool",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "desktopworkspaces",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_desktop_workspace",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "desktopworkspaceapplicationgroupassociations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_desktop_workspace_application_group_association",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "hubs",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_hub",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "hubbgpconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_hub_bgp_connection",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "hubconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_hub_connection",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "hubips",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_hub_ip",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "hubroutetables",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_hub_route_table",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "hubsecuritypartnerproviders",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_hub_security_partner_provider",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "machines",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_machine",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "machineconfigurationpolicyassignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_machine_configuration_policy_assignment",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "machinedatadiskattachments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_machine_data_disk_attachment",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "machineextensions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_machine_extension",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "machinescalesets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_machine_scale_set",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "machinescalesetextensions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_machine_scale_set_extension",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "networks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_network",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "networkgateways",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_network_gateway",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "networkgatewayconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_network_gateway_connection",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "networkpeerings",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_network_peering",
-		},
-		{
-			Group:    "virtual.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "wans",
-		}: {
-			JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_virtual_wan",
-		},
-		{
-			Group:    "vmware.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "clusters",
-		}: {
-			JsonIt:       controllers.GetJSONItr(vmwarev1alpha1.GetEncoder(), vmwarev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_vmware_cluster",
-		},
-		{
-			Group:    "vmware.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "expressrouteauthorizations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(vmwarev1alpha1.GetEncoder(), vmwarev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_vmware_express_route_authorization",
-		},
-		{
-			Group:    "vmware.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "privateclouds",
-		}: {
-			JsonIt:       controllers.GetJSONItr(vmwarev1alpha1.GetEncoder(), vmwarev1alpha1.GetDecoder()),
-			ResourceType: "azurerm_vmware_private_cloud",
-		},
-		{
-			Group:    "vpn.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "gateways",
-		}: {
-			JsonIt:       controllers.GetJSONItr(vpnv1alpha1.GetEncoder(), vpnv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_vpn_gateway",
-		},
-		{
-			Group:    "vpn.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "gatewayconnections",
-		}: {
-			JsonIt:       controllers.GetJSONItr(vpnv1alpha1.GetEncoder(), vpnv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_vpn_gateway_connection",
-		},
-		{
-			Group:    "vpn.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "serverconfigurations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(vpnv1alpha1.GetEncoder(), vpnv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_vpn_server_configuration",
-		},
-		{
-			Group:    "vpn.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sites",
-		}: {
-			JsonIt:       controllers.GetJSONItr(vpnv1alpha1.GetEncoder(), vpnv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_vpn_site",
-		},
-		{
-			Group:    "web.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "applicationfirewallpolicies",
-		}: {
-			JsonIt:       controllers.GetJSONItr(webv1alpha1.GetEncoder(), webv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_web_application_firewall_policy",
-		},
-		{
-			Group:    "windows.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualmachines",
-		}: {
-			JsonIt:       controllers.GetJSONItr(windowsv1alpha1.GetEncoder(), windowsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_windows_virtual_machine",
-		},
-		{
-			Group:    "windows.azurerm.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "virtualmachinescalesets",
-		}: {
-			JsonIt:       controllers.GetJSONItr(windowsv1alpha1.GetEncoder(), windowsv1alpha1.GetDecoder()),
-			ResourceType: "azurerm_windows_virtual_machine_scale_set",
-		},
-	}
-)
+var allJsonIt = map[schema.GroupVersionResource]Data{
+	{
+		Group:    "advanced.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "threatprotections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(advancedv1alpha1.GetEncoder(), advancedv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_advanced_threat_protection",
+	},
+	{
+		Group:    "analysis.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servicesservers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(analysisv1alpha1.GetEncoder(), analysisv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_analysis_services_server",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "apimanagements",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "apis",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_api",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "apidiagnostics",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_api_diagnostic",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "apioperations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_api_operation",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "apioperationpolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_api_operation_policy",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "apioperationtags",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_api_operation_tag",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "apipolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_api_policy",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "apischemas",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_api_schema",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "apiversionsets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_api_version_set",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "authorizationservers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_authorization_server",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "backends",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_backend",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "certificates",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_certificate",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "customdomains",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_custom_domain",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "diagnostics",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_diagnostic",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "emailtemplates",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_email_template",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "groups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_group",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "groupusers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_group_user",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "identityprovideraads",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_identity_provider_aad",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "identityprovideraadb2cs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_identity_provider_aadb2c",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "identityproviderfacebooks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_identity_provider_facebook",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "identityprovidergoogles",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_identity_provider_google",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "identityprovidermicrosofts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_identity_provider_microsoft",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "identityprovidertwitters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_identity_provider_twitter",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "loggers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_logger",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "namedvalues",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_named_value",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "openidconnectproviders",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_openid_connect_provider",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "policies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_policy",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "products",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_product",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "productapis",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_product_api",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "productgroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_product_group",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "productpolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_product_policy",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "properties",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_property",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "rediscaches",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_redis_cache",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "subscriptions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_subscription",
+	},
+	{
+		Group:    "apimanagement.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "users",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apimanagementv1alpha1.GetEncoder(), apimanagementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_api_management_user",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "configurations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_configuration",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "services",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serviceactiveslots",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_active_slot",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servicecertificates",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_certificate",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servicecertificatebindings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_certificate_binding",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servicecertificateorders",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_certificate_order",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servicecustomhostnamebindings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_custom_hostname_binding",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serviceenvironments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_environment",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serviceenvironmentv3s",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_environment_v3",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servicehybridconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_hybrid_connection",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servicemanagedcertificates",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_managed_certificate",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serviceplans",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_plan",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serviceslots",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_slot",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serviceslotvirtualnetworkswiftconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_slot_virtual_network_swift_connection",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servicesourcecontroltokens",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_source_control_token",
+	},
+	{
+		Group:    "app.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servicevirtualnetworkswiftconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(appv1alpha1.GetEncoder(), appv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_app_service_virtual_network_swift_connection",
+	},
+	{
+		Group:    "application.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "gateways",
+	}: {
+		JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_application_gateway",
+	},
+	{
+		Group:    "application.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "insights",
+	}: {
+		JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_application_insights",
+	},
+	{
+		Group:    "application.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "insightsanalyticsitems",
+	}: {
+		JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_application_insights_analytics_item",
+	},
+	{
+		Group:    "application.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "insightsapikeys",
+	}: {
+		JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_application_insights_api_key",
+	},
+	{
+		Group:    "application.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "insightssmartdetectionrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_application_insights_smart_detection_rule",
+	},
+	{
+		Group:    "application.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "insightswebtests",
+	}: {
+		JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_application_insights_web_test",
+	},
+	{
+		Group:    "application.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "securitygroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(applicationv1alpha1.GetEncoder(), applicationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_application_security_group",
+	},
+	{
+		Group:    "attestation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "providers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(attestationv1alpha1.GetEncoder(), attestationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_attestation_provider",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_account",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "certificates",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_certificate",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "connections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_connection",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "connectioncertificates",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_connection_certificate",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "connectionclassiccertificates",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_connection_classic_certificate",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "connectionserviceprincipals",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_connection_service_principal",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "credentials",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_credential",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dscconfigurations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_dsc_configuration",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dscnodeconfigurations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_dsc_nodeconfiguration",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "jobschedules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_job_schedule",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "modules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_module",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "runbooks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_runbook",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "schedules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_schedule",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "variablebools",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_variable_bool",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "variabledatetimes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_variable_datetime",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "variableints",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_variable_int",
+	},
+	{
+		Group:    "automation.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "variablestrings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(automationv1alpha1.GetEncoder(), automationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_automation_variable_string",
+	},
+	{
+		Group:    "availability.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(availabilityv1alpha1.GetEncoder(), availabilityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_availability_set",
+	},
+	{
+		Group:    "backup.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "containerstorageaccounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(backupv1alpha1.GetEncoder(), backupv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_backup_container_storage_account",
+	},
+	{
+		Group:    "backup.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "policyfileshares",
+	}: {
+		JsonIt:       controllers.GetJSONItr(backupv1alpha1.GetEncoder(), backupv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_backup_policy_file_share",
+	},
+	{
+		Group:    "backup.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "policyvms",
+	}: {
+		JsonIt:       controllers.GetJSONItr(backupv1alpha1.GetEncoder(), backupv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_backup_policy_vm",
+	},
+	{
+		Group:    "backup.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "protectedfileshares",
+	}: {
+		JsonIt:       controllers.GetJSONItr(backupv1alpha1.GetEncoder(), backupv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_backup_protected_file_share",
+	},
+	{
+		Group:    "backup.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "protectedvms",
+	}: {
+		JsonIt:       controllers.GetJSONItr(backupv1alpha1.GetEncoder(), backupv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_backup_protected_vm",
+	},
+	{
+		Group:    "bastion.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "hosts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(bastionv1alpha1.GetEncoder(), bastionv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_bastion_host",
+	},
+	{
+		Group:    "batch.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(batchv1alpha1.GetEncoder(), batchv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_batch_account",
+	},
+	{
+		Group:    "batch.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "applications",
+	}: {
+		JsonIt:       controllers.GetJSONItr(batchv1alpha1.GetEncoder(), batchv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_batch_application",
+	},
+	{
+		Group:    "batch.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "certificates",
+	}: {
+		JsonIt:       controllers.GetJSONItr(batchv1alpha1.GetEncoder(), batchv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_batch_certificate",
+	},
+	{
+		Group:    "batch.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "pools",
+	}: {
+		JsonIt:       controllers.GetJSONItr(batchv1alpha1.GetEncoder(), batchv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_batch_pool",
+	},
+	{
+		Group:    "blueprint.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "assignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(blueprintv1alpha1.GetEncoder(), blueprintv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_blueprint_assignment",
+	},
+	{
+		Group:    "bot.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "channeldirectlines",
+	}: {
+		JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_bot_channel_directline",
+	},
+	{
+		Group:    "bot.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "channelemails",
+	}: {
+		JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_bot_channel_email",
+	},
+	{
+		Group:    "bot.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "channelmsteams",
+	}: {
+		JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_bot_channel_ms_teams",
+	},
+	{
+		Group:    "bot.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "channelslacks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_bot_channel_slack",
+	},
+	{
+		Group:    "bot.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "channelsregistrations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_bot_channels_registration",
+	},
+	{
+		Group:    "bot.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "connections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_bot_connection",
+	},
+	{
+		Group:    "bot.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "webapps",
+	}: {
+		JsonIt:       controllers.GetJSONItr(botv1alpha1.GetEncoder(), botv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_bot_web_app",
+	},
+	{
+		Group:    "cdn.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "endpoints",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cdnv1alpha1.GetEncoder(), cdnv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cdn_endpoint",
+	},
+	{
+		Group:    "cdn.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "profiles",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cdnv1alpha1.GetEncoder(), cdnv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cdn_profile",
+	},
+	{
+		Group:    "cognitive.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cognitivev1alpha1.GetEncoder(), cognitivev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cognitive_account",
+	},
+	{
+		Group:    "communication.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "services",
+	}: {
+		JsonIt:       controllers.GetJSONItr(communicationv1alpha1.GetEncoder(), communicationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_communication_service",
+	},
+	{
+		Group:    "consumption.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "budgetresourcegroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(consumptionv1alpha1.GetEncoder(), consumptionv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_consumption_budget_resource_group",
+	},
+	{
+		Group:    "consumption.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "budgetsubscriptions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(consumptionv1alpha1.GetEncoder(), consumptionv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_consumption_budget_subscription",
+	},
+	{
+		Group:    "container.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "groups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(containerv1alpha1.GetEncoder(), containerv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_container_group",
+	},
+	{
+		Group:    "container.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "registries",
+	}: {
+		JsonIt:       controllers.GetJSONItr(containerv1alpha1.GetEncoder(), containerv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_container_registry",
+	},
+	{
+		Group:    "container.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "registryscopemaps",
+	}: {
+		JsonIt:       controllers.GetJSONItr(containerv1alpha1.GetEncoder(), containerv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_container_registry_scope_map",
+	},
+	{
+		Group:    "container.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "registrytokens",
+	}: {
+		JsonIt:       controllers.GetJSONItr(containerv1alpha1.GetEncoder(), containerv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_container_registry_token",
+	},
+	{
+		Group:    "container.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "registrywebhooks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(containerv1alpha1.GetEncoder(), containerv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_container_registry_webhook",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_account",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cassandrakeyspaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_cassandra_keyspace",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cassandratables",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_cassandra_table",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "gremlindatabases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_gremlin_database",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "gremlingraphs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_gremlin_graph",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "mongocollections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_mongo_collection",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "mongodatabases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_mongo_database",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "notebookworkspaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_notebook_workspace",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sqlcontainers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_sql_container",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sqldatabases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_sql_database",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sqlfunctions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_sql_function",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sqlstoredprocedures",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_sql_stored_procedure",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sqltriggers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_sql_trigger",
+	},
+	{
+		Group:    "cosmosdb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "tables",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cosmosdbv1alpha1.GetEncoder(), cosmosdbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cosmosdb_table",
+	},
+	{
+		Group:    "cost.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "managementexportresourcegroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(costv1alpha1.GetEncoder(), costv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_cost_management_export_resource_group",
+	},
+	{
+		Group:    "custom.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "providers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(customv1alpha1.GetEncoder(), customv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_custom_provider",
+	},
+	{
+		Group:    "dashboard.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dashboards",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dashboardv1alpha1.GetEncoder(), dashboardv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dashboard",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factories",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorydatasetazureblobs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_dataset_azure_blob",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorydatasetcosmosdbsqlapis",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_dataset_cosmosdb_sqlapi",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorydatasetdelimitedtexts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_dataset_delimited_text",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorydatasethttps",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_dataset_http",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorydatasetjsons",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_dataset_json",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorydatasetmysqls",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_dataset_mysql",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorydatasetparquets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_dataset_parquet",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorydatasetpostgresqls",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_dataset_postgresql",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorydatasetsnowflakes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_dataset_snowflake",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorydatasetsqlservertables",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_dataset_sql_server_table",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factoryintegrationruntimeazures",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_integration_runtime_azure",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factoryintegrationruntimeazuressis",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_integration_runtime_azure_ssis",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factoryintegrationruntimemanageds",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_integration_runtime_managed",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factoryintegrationruntimeselfhosteds",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_integration_runtime_self_hosted",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedcustomservices",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_custom_service",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedserviceazureblobstorages",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_azure_blob_storage",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedserviceazuredatabricks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_azure_databricks",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedserviceazurefilestorages",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_azure_file_storage",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedserviceazurefunctions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_azure_function",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedserviceazuresearches",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_azure_search",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedserviceazuresqldatabases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_azure_sql_database",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedserviceazuretablestorages",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_azure_table_storage",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedservicecosmosdbs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_cosmosdb",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedservicedatalakestoragegen2s",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_data_lake_storage_gen2",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedservicekeyvaults",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_key_vault",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedservicekustoes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_kusto",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedservicemysqls",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_mysql",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedserviceodata",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_odata",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedservicepostgresqls",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_postgresql",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedservicesftps",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_sftp",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedservicesnowflakes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_snowflake",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedservicesqlservers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_sql_server",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedservicesynapsis",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_synapse",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorylinkedservicewebs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_linked_service_web",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorypipelines",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_pipeline",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorytriggerblobevents",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_trigger_blob_event",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "factorytriggerschedules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_factory_trigger_schedule",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "lakeanalyticsaccounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_lake_analytics_account",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "lakeanalyticsfirewallrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_lake_analytics_firewall_rule",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "lakestores",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_lake_store",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "lakestorefiles",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_lake_store_file",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "lakestorefirewallrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_lake_store_firewall_rule",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "lakestorevirtualnetworkrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_lake_store_virtual_network_rule",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "protectionbackupinstancepostgresqls",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_protection_backup_instance_postgresql",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "protectionbackuppolicypostgresqls",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_protection_backup_policy_postgresql",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "protectionbackupvaults",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_protection_backup_vault",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "shares",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_share",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "shareaccounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_share_account",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sharedatasetblobstorages",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_share_dataset_blob_storage",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sharedatasetdatalakegen1s",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_share_dataset_data_lake_gen1",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sharedatasetdatalakegen2s",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_share_dataset_data_lake_gen2",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sharedatasetkustoclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_share_dataset_kusto_cluster",
+	},
+	{
+		Group:    "data.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sharedatasetkustodatabases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_data_share_dataset_kusto_database",
+	},
+	{
+		Group:    "database.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "migrationprojects",
+	}: {
+		JsonIt:       controllers.GetJSONItr(databasev1alpha1.GetEncoder(), databasev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_database_migration_project",
+	},
+	{
+		Group:    "database.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "migrationservices",
+	}: {
+		JsonIt:       controllers.GetJSONItr(databasev1alpha1.GetEncoder(), databasev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_database_migration_service",
+	},
+	{
+		Group:    "databox.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "edgedevices",
+	}: {
+		JsonIt:       controllers.GetJSONItr(databoxv1alpha1.GetEncoder(), databoxv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_databox_edge_device",
+	},
+	{
+		Group:    "databox.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "edgeorders",
+	}: {
+		JsonIt:       controllers.GetJSONItr(databoxv1alpha1.GetEncoder(), databoxv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_databox_edge_order",
+	},
+	{
+		Group:    "databricks.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "workspaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(databricksv1alpha1.GetEncoder(), databricksv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_databricks_workspace",
+	},
+	{
+		Group:    "dedicatedhardware.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "securitymodules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dedicatedhardwarev1alpha1.GetEncoder(), dedicatedhardwarev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dedicated_hardware_security_module",
+	},
+	{
+		Group:    "dedicatedhost.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dedicatedhosts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dedicatedhostv1alpha1.GetEncoder(), dedicatedhostv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dedicated_host",
+	},
+	{
+		Group:    "dedicatedhost.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "groups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dedicatedhostv1alpha1.GetEncoder(), dedicatedhostv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dedicated_host_group",
+	},
+	{
+		Group:    "devtest.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "globalvmshutdownschedules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dev_test_global_vm_shutdown_schedule",
+	},
+	{
+		Group:    "devtest.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "labs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dev_test_lab",
+	},
+	{
+		Group:    "devtest.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "linuxvirtualmachines",
+	}: {
+		JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dev_test_linux_virtual_machine",
+	},
+	{
+		Group:    "devtest.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "policies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dev_test_policy",
+	},
+	{
+		Group:    "devtest.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "schedules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dev_test_schedule",
+	},
+	{
+		Group:    "devtest.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualnetworks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dev_test_virtual_network",
+	},
+	{
+		Group:    "devtest.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "windowsvirtualmachines",
+	}: {
+		JsonIt:       controllers.GetJSONItr(devtestv1alpha1.GetEncoder(), devtestv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dev_test_windows_virtual_machine",
+	},
+	{
+		Group:    "devspace.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "controllers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(devspacev1alpha1.GetEncoder(), devspacev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_devspace_controller",
+	},
+	{
+		Group:    "digital.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "twinsendpointeventgrids",
+	}: {
+		JsonIt:       controllers.GetJSONItr(digitalv1alpha1.GetEncoder(), digitalv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_digital_twins_endpoint_eventgrid",
+	},
+	{
+		Group:    "digital.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "twinsendpointeventhubs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(digitalv1alpha1.GetEncoder(), digitalv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_digital_twins_endpoint_eventhub",
+	},
+	{
+		Group:    "digital.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "twinsendpointservicebus",
+	}: {
+		JsonIt:       controllers.GetJSONItr(digitalv1alpha1.GetEncoder(), digitalv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_digital_twins_endpoint_servicebus",
+	},
+	{
+		Group:    "digital.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "twinsinstances",
+	}: {
+		JsonIt:       controllers.GetJSONItr(digitalv1alpha1.GetEncoder(), digitalv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_digital_twins_instance",
+	},
+	{
+		Group:    "disk.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accesses",
+	}: {
+		JsonIt:       controllers.GetJSONItr(diskv1alpha1.GetEncoder(), diskv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_disk_access",
+	},
+	{
+		Group:    "disk.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "encryptionsets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(diskv1alpha1.GetEncoder(), diskv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_disk_encryption_set",
+	},
+	{
+		Group:    "dns.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "arecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dns_a_record",
+	},
+	{
+		Group:    "dns.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "aaaarecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dns_aaaa_record",
+	},
+	{
+		Group:    "dns.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "caarecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dns_caa_record",
+	},
+	{
+		Group:    "dns.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cnamerecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dns_cname_record",
+	},
+	{
+		Group:    "dns.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "mxrecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dns_mx_record",
+	},
+	{
+		Group:    "dns.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "nsrecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dns_ns_record",
+	},
+	{
+		Group:    "dns.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "ptrrecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dns_ptr_record",
+	},
+	{
+		Group:    "dns.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "srvrecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dns_srv_record",
+	},
+	{
+		Group:    "dns.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "txtrecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dns_txt_record",
+	},
+	{
+		Group:    "dns.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "zones",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dnsv1alpha1.GetEncoder(), dnsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_dns_zone",
+	},
+	{
+		Group:    "eventgrid.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "domains",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventgrid_domain",
+	},
+	{
+		Group:    "eventgrid.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "domaintopics",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventgrid_domain_topic",
+	},
+	{
+		Group:    "eventgrid.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "eventsubscriptions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventgrid_event_subscription",
+	},
+	{
+		Group:    "eventgrid.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "systemtopics",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventgrid_system_topic",
+	},
+	{
+		Group:    "eventgrid.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "systemtopiceventsubscriptions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventgrid_system_topic_event_subscription",
+	},
+	{
+		Group:    "eventgrid.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "topics",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventgridv1alpha1.GetEncoder(), eventgridv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventgrid_topic",
+	},
+	{
+		Group:    "eventhub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "eventhubs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventhub",
+	},
+	{
+		Group:    "eventhub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "authorizationrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventhub_authorization_rule",
+	},
+	{
+		Group:    "eventhub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "clusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventhub_cluster",
+	},
+	{
+		Group:    "eventhub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "consumergroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventhub_consumer_group",
+	},
+	{
+		Group:    "eventhub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "namespaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventhub_namespace",
+	},
+	{
+		Group:    "eventhub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "namespaceauthorizationrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventhub_namespace_authorization_rule",
+	},
+	{
+		Group:    "eventhub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "namespacecustomermanagedkeys",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventhub_namespace_customer_managed_key",
+	},
+	{
+		Group:    "eventhub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "namespacedisasterrecoveryconfigs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(eventhubv1alpha1.GetEncoder(), eventhubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_eventhub_namespace_disaster_recovery_config",
+	},
+	{
+		Group:    "expressroute.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "circuits",
+	}: {
+		JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_express_route_circuit",
+	},
+	{
+		Group:    "expressroute.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "circuitauthorizations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_express_route_circuit_authorization",
+	},
+	{
+		Group:    "expressroute.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "circuitconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_express_route_circuit_connection",
+	},
+	{
+		Group:    "expressroute.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "circuitpeerings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_express_route_circuit_peering",
+	},
+	{
+		Group:    "expressroute.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "connections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_express_route_connection",
+	},
+	{
+		Group:    "expressroute.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "gateways",
+	}: {
+		JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_express_route_gateway",
+	},
+	{
+		Group:    "expressroute.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "ports",
+	}: {
+		JsonIt:       controllers.GetJSONItr(expressroutev1alpha1.GetEncoder(), expressroutev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_express_route_port",
+	},
+	{
+		Group:    "firewall.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "firewalls",
+	}: {
+		JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_firewall",
+	},
+	{
+		Group:    "firewall.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "applicationrulecollections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_firewall_application_rule_collection",
+	},
+	{
+		Group:    "firewall.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "natrulecollections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_firewall_nat_rule_collection",
+	},
+	{
+		Group:    "firewall.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "networkrulecollections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_firewall_network_rule_collection",
+	},
+	{
+		Group:    "firewall.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "policies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_firewall_policy",
+	},
+	{
+		Group:    "firewall.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "policyrulecollectiongroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(firewallv1alpha1.GetEncoder(), firewallv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_firewall_policy_rule_collection_group",
+	},
+	{
+		Group:    "frontdoor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "frontdoors",
+	}: {
+		JsonIt:       controllers.GetJSONItr(frontdoorv1alpha1.GetEncoder(), frontdoorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_frontdoor",
+	},
+	{
+		Group:    "frontdoor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "customhttpsconfigurations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(frontdoorv1alpha1.GetEncoder(), frontdoorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_frontdoor_custom_https_configuration",
+	},
+	{
+		Group:    "frontdoor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "firewallpolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(frontdoorv1alpha1.GetEncoder(), frontdoorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_frontdoor_firewall_policy",
+	},
+	{
+		Group:    "function.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "apps",
+	}: {
+		JsonIt:       controllers.GetJSONItr(functionv1alpha1.GetEncoder(), functionv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_function_app",
+	},
+	{
+		Group:    "function.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "appslots",
+	}: {
+		JsonIt:       controllers.GetJSONItr(functionv1alpha1.GetEncoder(), functionv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_function_app_slot",
+	},
+	{
+		Group:    "hdinsight.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "hadoopclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hdinsight_hadoop_cluster",
+	},
+	{
+		Group:    "hdinsight.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "hbaseclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hdinsight_hbase_cluster",
+	},
+	{
+		Group:    "hdinsight.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "interactivequeryclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hdinsight_interactive_query_cluster",
+	},
+	{
+		Group:    "hdinsight.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "kafkaclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hdinsight_kafka_cluster",
+	},
+	{
+		Group:    "hdinsight.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "mlservicesclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hdinsight_ml_services_cluster",
+	},
+	{
+		Group:    "hdinsight.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "rserverclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hdinsight_rserver_cluster",
+	},
+	{
+		Group:    "hdinsight.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sparkclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hdinsight_spark_cluster",
+	},
+	{
+		Group:    "hdinsight.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "stormclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hdinsightv1alpha1.GetEncoder(), hdinsightv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hdinsight_storm_cluster",
+	},
+	{
+		Group:    "healthbot.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "healthbots",
+	}: {
+		JsonIt:       controllers.GetJSONItr(healthbotv1alpha1.GetEncoder(), healthbotv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_healthbot",
+	},
+	{
+		Group:    "healthcare.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "services",
+	}: {
+		JsonIt:       controllers.GetJSONItr(healthcarev1alpha1.GetEncoder(), healthcarev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_healthcare_service",
+	},
+	{
+		Group:    "hpc.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "caches",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hpcv1alpha1.GetEncoder(), hpcv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hpc_cache",
+	},
+	{
+		Group:    "hpc.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cacheaccesspolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hpcv1alpha1.GetEncoder(), hpcv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hpc_cache_access_policy",
+	},
+	{
+		Group:    "hpc.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cacheblobnfstargets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hpcv1alpha1.GetEncoder(), hpcv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hpc_cache_blob_nfs_target",
+	},
+	{
+		Group:    "hpc.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cacheblobtargets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hpcv1alpha1.GetEncoder(), hpcv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hpc_cache_blob_target",
+	},
+	{
+		Group:    "hpc.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cachenfstargets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(hpcv1alpha1.GetEncoder(), hpcv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_hpc_cache_nfs_target",
+	},
+	{
+		Group:    "image.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "images",
+	}: {
+		JsonIt:       controllers.GetJSONItr(imagev1alpha1.GetEncoder(), imagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_image",
+	},
+	{
+		Group:    "integration.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serviceenvironments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(integrationv1alpha1.GetEncoder(), integrationv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_integration_service_environment",
+	},
+	{
+		Group:    "iotsecurity.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "devicegroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iotsecurityv1alpha1.GetEncoder(), iotsecurityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iot_security_device_group",
+	},
+	{
+		Group:    "iotsecurity.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "solutions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iotsecurityv1alpha1.GetEncoder(), iotsecurityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iot_security_solution",
+	},
+	{
+		Group:    "iottime.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "seriesinsightsaccesspolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iottimev1alpha1.GetEncoder(), iottimev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iot_time_series_insights_access_policy",
+	},
+	{
+		Group:    "iottime.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "seriesinsightseventsourceiothubs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iottimev1alpha1.GetEncoder(), iottimev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iot_time_series_insights_event_source_iothub",
+	},
+	{
+		Group:    "iottime.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "seriesinsightsgen2environments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iottimev1alpha1.GetEncoder(), iottimev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iot_time_series_insights_gen2_environment",
+	},
+	{
+		Group:    "iottime.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "seriesinsightsreferencedatasets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iottimev1alpha1.GetEncoder(), iottimev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iot_time_series_insights_reference_data_set",
+	},
+	{
+		Group:    "iottime.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "seriesinsightsstandardenvironments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iottimev1alpha1.GetEncoder(), iottimev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iot_time_series_insights_standard_environment",
+	},
+	{
+		Group:    "iotcentral.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "applications",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iotcentralv1alpha1.GetEncoder(), iotcentralv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iotcentral_application",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "iothubs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "consumergroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_consumer_group",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dps",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_dps",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dpscertificates",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_dps_certificate",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dpssharedaccesspolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_dps_shared_access_policy",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "endpointeventhubs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_endpoint_eventhub",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "endpointservicebusqueues",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_endpoint_servicebus_queue",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "endpointservicebustopics",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_endpoint_servicebus_topic",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "endpointstoragecontainers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_endpoint_storage_container",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "enrichments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_enrichment",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "fallbackroutes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_fallback_route",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "routes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_route",
+	},
+	{
+		Group:    "iothub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sharedaccesspolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(iothubv1alpha1.GetEncoder(), iothubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_iothub_shared_access_policy",
+	},
+	{
+		Group:    "ip.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "groups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(ipv1alpha1.GetEncoder(), ipv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_ip_group",
+	},
+	{
+		Group:    "keyvault.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "keyvaults",
+	}: {
+		JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_key_vault",
+	},
+	{
+		Group:    "keyvault.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accesspolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_key_vault_access_policy",
+	},
+	{
+		Group:    "keyvault.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "certificates",
+	}: {
+		JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_key_vault_certificate",
+	},
+	{
+		Group:    "keyvault.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "certificateissuers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_key_vault_certificate_issuer",
+	},
+	{
+		Group:    "keyvault.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "keys",
+	}: {
+		JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_key_vault_key",
+	},
+	{
+		Group:    "keyvault.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "managedhardwaresecuritymodules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_key_vault_managed_hardware_security_module",
+	},
+	{
+		Group:    "keyvault.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "secrets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(keyvaultv1alpha1.GetEncoder(), keyvaultv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_key_vault_secret",
+	},
+	{
+		Group:    "kubernetescluster.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "kubernetesclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kubernetesclusterv1alpha1.GetEncoder(), kubernetesclusterv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kubernetes_cluster",
+	},
+	{
+		Group:    "kubernetescluster.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "nodepools",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kubernetesclusterv1alpha1.GetEncoder(), kubernetesclusterv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kubernetes_cluster_node_pool",
+	},
+	{
+		Group:    "kusto.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "attacheddatabaseconfigurations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kusto_attached_database_configuration",
+	},
+	{
+		Group:    "kusto.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "clusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kusto_cluster",
+	},
+	{
+		Group:    "kusto.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "clustercustomermanagedkeys",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kusto_cluster_customer_managed_key",
+	},
+	{
+		Group:    "kusto.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "clusterprincipalassignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kusto_cluster_principal_assignment",
+	},
+	{
+		Group:    "kusto.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "databases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kusto_database",
+	},
+	{
+		Group:    "kusto.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "databaseprincipals",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kusto_database_principal",
+	},
+	{
+		Group:    "kusto.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "databaseprincipalassignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kusto_database_principal_assignment",
+	},
+	{
+		Group:    "kusto.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "eventgriddataconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kusto_eventgrid_data_connection",
+	},
+	{
+		Group:    "kusto.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "eventhubdataconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kusto_eventhub_data_connection",
+	},
+	{
+		Group:    "kusto.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "iothubdataconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(kustov1alpha1.GetEncoder(), kustov1alpha1.GetDecoder()),
+		ResourceType: "azurerm_kusto_iothub_data_connection",
+	},
+	{
+		Group:    "lb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "lbs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_lb",
+	},
+	{
+		Group:    "lb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "backendaddresspools",
+	}: {
+		JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_lb_backend_address_pool",
+	},
+	{
+		Group:    "lb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "backendaddresspooladdresses",
+	}: {
+		JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_lb_backend_address_pool_address",
+	},
+	{
+		Group:    "lb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "natpools",
+	}: {
+		JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_lb_nat_pool",
+	},
+	{
+		Group:    "lb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "natrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_lb_nat_rule",
+	},
+	{
+		Group:    "lb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "outboundrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_lb_outbound_rule",
+	},
+	{
+		Group:    "lb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "probes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_lb_probe",
+	},
+	{
+		Group:    "lb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "rules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(lbv1alpha1.GetEncoder(), lbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_lb_rule",
+	},
+	{
+		Group:    "lighthouse.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "assignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(lighthousev1alpha1.GetEncoder(), lighthousev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_lighthouse_assignment",
+	},
+	{
+		Group:    "lighthouse.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "definitions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(lighthousev1alpha1.GetEncoder(), lighthousev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_lighthouse_definition",
+	},
+	{
+		Group:    "linux.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualmachines",
+	}: {
+		JsonIt:       controllers.GetJSONItr(linuxv1alpha1.GetEncoder(), linuxv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_linux_virtual_machine",
+	},
+	{
+		Group:    "linux.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualmachinescalesets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(linuxv1alpha1.GetEncoder(), linuxv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_linux_virtual_machine_scale_set",
+	},
+	{
+		Group:    "local.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "networkgateways",
+	}: {
+		JsonIt:       controllers.GetJSONItr(localv1alpha1.GetEncoder(), localv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_local_network_gateway",
+	},
+	{
+		Group:    "loganalytics.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "clusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_log_analytics_cluster",
+	},
+	{
+		Group:    "loganalytics.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "clustercustomermanagedkeys",
+	}: {
+		JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_log_analytics_cluster_customer_managed_key",
+	},
+	{
+		Group:    "loganalytics.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dataexportrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_log_analytics_data_export_rule",
+	},
+	{
+		Group:    "loganalytics.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "datasourcewindowsevents",
+	}: {
+		JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_log_analytics_datasource_windows_event",
+	},
+	{
+		Group:    "loganalytics.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "datasourcewindowsperformancecounters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_log_analytics_datasource_windows_performance_counter",
+	},
+	{
+		Group:    "loganalytics.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "linkedservices",
+	}: {
+		JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_log_analytics_linked_service",
+	},
+	{
+		Group:    "loganalytics.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "linkedstorageaccounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_log_analytics_linked_storage_account",
+	},
+	{
+		Group:    "loganalytics.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "savedsearches",
+	}: {
+		JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_log_analytics_saved_search",
+	},
+	{
+		Group:    "loganalytics.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "solutions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_log_analytics_solution",
+	},
+	{
+		Group:    "loganalytics.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "storageinsights",
+	}: {
+		JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_log_analytics_storage_insights",
+	},
+	{
+		Group:    "loganalytics.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "workspaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(loganalyticsv1alpha1.GetEncoder(), loganalyticsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_log_analytics_workspace",
+	},
+	{
+		Group:    "logicapp.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "actioncustoms",
+	}: {
+		JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_logic_app_action_custom",
+	},
+	{
+		Group:    "logicapp.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "actionhttps",
+	}: {
+		JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_logic_app_action_http",
+	},
+	{
+		Group:    "logicapp.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "integrationaccounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_logic_app_integration_account",
+	},
+	{
+		Group:    "logicapp.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "triggercustoms",
+	}: {
+		JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_logic_app_trigger_custom",
+	},
+	{
+		Group:    "logicapp.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "triggerhttprequests",
+	}: {
+		JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_logic_app_trigger_http_request",
+	},
+	{
+		Group:    "logicapp.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "triggerrecurrences",
+	}: {
+		JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_logic_app_trigger_recurrence",
+	},
+	{
+		Group:    "logicapp.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "workflows",
+	}: {
+		JsonIt:       controllers.GetJSONItr(logicappv1alpha1.GetEncoder(), logicappv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_logic_app_workflow",
+	},
+	{
+		Group:    "machine.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "learningcomputeclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(machinev1alpha1.GetEncoder(), machinev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_machine_learning_compute_cluster",
+	},
+	{
+		Group:    "machine.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "learninginferenceclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(machinev1alpha1.GetEncoder(), machinev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_machine_learning_inference_cluster",
+	},
+	{
+		Group:    "machine.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "learningworkspaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(machinev1alpha1.GetEncoder(), machinev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_machine_learning_workspace",
+	},
+	{
+		Group:    "maintenance.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "assignmentdedicatedhosts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(maintenancev1alpha1.GetEncoder(), maintenancev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_maintenance_assignment_dedicated_host",
+	},
+	{
+		Group:    "maintenance.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "assignmentvirtualmachines",
+	}: {
+		JsonIt:       controllers.GetJSONItr(maintenancev1alpha1.GetEncoder(), maintenancev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_maintenance_assignment_virtual_machine",
+	},
+	{
+		Group:    "maintenance.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "configurations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(maintenancev1alpha1.GetEncoder(), maintenancev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_maintenance_configuration",
+	},
+	{
+		Group:    "managed.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "applications",
+	}: {
+		JsonIt:       controllers.GetJSONItr(managedv1alpha1.GetEncoder(), managedv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_managed_application",
+	},
+	{
+		Group:    "managed.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "applicationdefinitions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(managedv1alpha1.GetEncoder(), managedv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_managed_application_definition",
+	},
+	{
+		Group:    "managed.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "disks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(managedv1alpha1.GetEncoder(), managedv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_managed_disk",
+	},
+	{
+		Group:    "management.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "groups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(managementv1alpha1.GetEncoder(), managementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_management_group",
+	},
+	{
+		Group:    "management.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "grouppolicyassignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(managementv1alpha1.GetEncoder(), managementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_management_group_policy_assignment",
+	},
+	{
+		Group:    "management.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "groupsubscriptionassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(managementv1alpha1.GetEncoder(), managementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_management_group_subscription_association",
+	},
+	{
+		Group:    "management.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "grouptemplatedeployments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(managementv1alpha1.GetEncoder(), managementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_management_group_template_deployment",
+	},
+	{
+		Group:    "management.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "locks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(managementv1alpha1.GetEncoder(), managementv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_management_lock",
+	},
+	{
+		Group:    "maps.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mapsv1alpha1.GetEncoder(), mapsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_maps_account",
+	},
+	{
+		Group:    "mariadb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "configurations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mariadbv1alpha1.GetEncoder(), mariadbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mariadb_configuration",
+	},
+	{
+		Group:    "mariadb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "databases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mariadbv1alpha1.GetEncoder(), mariadbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mariadb_database",
+	},
+	{
+		Group:    "mariadb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "firewallrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mariadbv1alpha1.GetEncoder(), mariadbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mariadb_firewall_rule",
+	},
+	{
+		Group:    "mariadb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mariadbv1alpha1.GetEncoder(), mariadbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mariadb_server",
+	},
+	{
+		Group:    "mariadb.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualnetworkrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mariadbv1alpha1.GetEncoder(), mariadbv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mariadb_virtual_network_rule",
+	},
+	{
+		Group:    "marketplace.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "agreements",
+	}: {
+		JsonIt:       controllers.GetJSONItr(marketplacev1alpha1.GetEncoder(), marketplacev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_marketplace_agreement",
+	},
+	{
+		Group:    "media.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "assets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_media_asset",
+	},
+	{
+		Group:    "media.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "assetfilters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_media_asset_filter",
+	},
+	{
+		Group:    "media.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "contentkeypolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_media_content_key_policy",
+	},
+	{
+		Group:    "media.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "jobs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_media_job",
+	},
+	{
+		Group:    "media.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "liveevents",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_media_live_event",
+	},
+	{
+		Group:    "media.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "liveeventoutputs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_media_live_event_output",
+	},
+	{
+		Group:    "media.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servicesaccounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_media_services_account",
+	},
+	{
+		Group:    "media.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "streamingendpoints",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_media_streaming_endpoint",
+	},
+	{
+		Group:    "media.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "streaminglocators",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_media_streaming_locator",
+	},
+	{
+		Group:    "media.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "streamingpolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_media_streaming_policy",
+	},
+	{
+		Group:    "media.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "transforms",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mediav1alpha1.GetEncoder(), mediav1alpha1.GetDecoder()),
+		ResourceType: "azurerm_media_transform",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "aaddiagnosticsettings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_aad_diagnostic_setting",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "actiongroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_action_group",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "actionruleactiongroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_action_rule_action_group",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "actionrulesuppressions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_action_rule_suppression",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "activitylogalerts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_activity_log_alert",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "autoscalesettings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_autoscale_setting",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "diagnosticsettings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_diagnostic_setting",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "logprofiles",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_log_profile",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "metricalerts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_metric_alert",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "scheduledqueryrulesalerts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_scheduled_query_rules_alert",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "scheduledqueryruleslogs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_scheduled_query_rules_log",
+	},
+	{
+		Group:    "monitor.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "smartdetectoralertrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(monitorv1alpha1.GetEncoder(), monitorv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_monitor_smart_detector_alert_rule",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "databases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_database",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "databaseextendedauditingpolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_database_extended_auditing_policy",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "databasevulnerabilityassessmentrulebaselines",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_database_vulnerability_assessment_rule_baseline",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "elasticpools",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_elasticpool",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "firewallrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_firewall_rule",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "jobagents",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_job_agent",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "jobcredentials",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_job_credential",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_server",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serverextendedauditingpolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_server_extended_auditing_policy",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serversecurityalertpolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_server_security_alert_policy",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servertransparentdataencryptions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_server_transparent_data_encryption",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servervulnerabilityassessments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_server_vulnerability_assessment",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualmachines",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_virtual_machine",
+	},
+	{
+		Group:    "mssql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualnetworkrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mssqlv1alpha1.GetEncoder(), mssqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mssql_virtual_network_rule",
+	},
+	{
+		Group:    "mysql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "activedirectoryadministrators",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mysql_active_directory_administrator",
+	},
+	{
+		Group:    "mysql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "configurations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mysql_configuration",
+	},
+	{
+		Group:    "mysql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "databases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mysql_database",
+	},
+	{
+		Group:    "mysql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "firewallrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mysql_firewall_rule",
+	},
+	{
+		Group:    "mysql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mysql_server",
+	},
+	{
+		Group:    "mysql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serverkeys",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mysql_server_key",
+	},
+	{
+		Group:    "mysql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualnetworkrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(mysqlv1alpha1.GetEncoder(), mysqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_mysql_virtual_network_rule",
+	},
+	{
+		Group:    "nat.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "gateways",
+	}: {
+		JsonIt:       controllers.GetJSONItr(natv1alpha1.GetEncoder(), natv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_nat_gateway",
+	},
+	{
+		Group:    "nat.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "gatewaypublicipassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(natv1alpha1.GetEncoder(), natv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_nat_gateway_public_ip_association",
+	},
+	{
+		Group:    "nat.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "gatewaypublicipprefixassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(natv1alpha1.GetEncoder(), natv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_nat_gateway_public_ip_prefix_association",
+	},
+	{
+		Group:    "netapp.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(netappv1alpha1.GetEncoder(), netappv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_netapp_account",
+	},
+	{
+		Group:    "netapp.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "pools",
+	}: {
+		JsonIt:       controllers.GetJSONItr(netappv1alpha1.GetEncoder(), netappv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_netapp_pool",
+	},
+	{
+		Group:    "netapp.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "snapshots",
+	}: {
+		JsonIt:       controllers.GetJSONItr(netappv1alpha1.GetEncoder(), netappv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_netapp_snapshot",
+	},
+	{
+		Group:    "netapp.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "volumes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(netappv1alpha1.GetEncoder(), netappv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_netapp_volume",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "connectionmonitors",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_connection_monitor",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "ddosprotectionplans",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_ddos_protection_plan",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "interfaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_interface",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "interfaceapplicationgatewaybackendaddresspoolassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_interface_application_gateway_backend_address_pool_association",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "interfaceapplicationsecuritygroupassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_interface_application_security_group_association",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "interfacebackendaddresspoolassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_interface_backend_address_pool_association",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "interfacenatruleassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_interface_nat_rule_association",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "interfacesecuritygroupassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_interface_security_group_association",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "packetcaptures",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_packet_capture",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "profiles",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_profile",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "securitygroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_security_group",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "securityrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_security_rule",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "watchers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_watcher",
+	},
+	{
+		Group:    "network.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "watcherflowlogs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(networkv1alpha1.GetEncoder(), networkv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_network_watcher_flow_log",
+	},
+	{
+		Group:    "notificationhub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "notificationhubs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(notificationhubv1alpha1.GetEncoder(), notificationhubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_notification_hub",
+	},
+	{
+		Group:    "notificationhub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "authorizationrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(notificationhubv1alpha1.GetEncoder(), notificationhubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_notification_hub_authorization_rule",
+	},
+	{
+		Group:    "notificationhub.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "namespaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(notificationhubv1alpha1.GetEncoder(), notificationhubv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_notification_hub_namespace",
+	},
+	{
+		Group:    "orchestrated.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualmachinescalesets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(orchestratedv1alpha1.GetEncoder(), orchestratedv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_orchestrated_virtual_machine_scale_set",
+	},
+	{
+		Group:    "packet.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "captures",
+	}: {
+		JsonIt:       controllers.GetJSONItr(packetv1alpha1.GetEncoder(), packetv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_packet_capture",
+	},
+	{
+		Group:    "point.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "tositevpngateways",
+	}: {
+		JsonIt:       controllers.GetJSONItr(pointv1alpha1.GetEncoder(), pointv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_point_to_site_vpn_gateway",
+	},
+	{
+		Group:    "policy.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "assignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(policyv1alpha1.GetEncoder(), policyv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_policy_assignment",
+	},
+	{
+		Group:    "policy.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "definitions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(policyv1alpha1.GetEncoder(), policyv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_policy_definition",
+	},
+	{
+		Group:    "policy.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "remediations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(policyv1alpha1.GetEncoder(), policyv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_policy_remediation",
+	},
+	{
+		Group:    "policy.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "setdefinitions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(policyv1alpha1.GetEncoder(), policyv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_policy_set_definition",
+	},
+	{
+		Group:    "portal.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "tenantconfigurations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(portalv1alpha1.GetEncoder(), portalv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_portal_tenant_configuration",
+	},
+	{
+		Group:    "postgresql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "activedirectoryadministrators",
+	}: {
+		JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_postgresql_active_directory_administrator",
+	},
+	{
+		Group:    "postgresql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "configurations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_postgresql_configuration",
+	},
+	{
+		Group:    "postgresql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "databases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_postgresql_database",
+	},
+	{
+		Group:    "postgresql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "firewallrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_postgresql_firewall_rule",
+	},
+	{
+		Group:    "postgresql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "flexibleservers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_postgresql_flexible_server",
+	},
+	{
+		Group:    "postgresql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "flexibleserverfirewallrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_postgresql_flexible_server_firewall_rule",
+	},
+	{
+		Group:    "postgresql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_postgresql_server",
+	},
+	{
+		Group:    "postgresql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serverkeys",
+	}: {
+		JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_postgresql_server_key",
+	},
+	{
+		Group:    "postgresql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualnetworkrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(postgresqlv1alpha1.GetEncoder(), postgresqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_postgresql_virtual_network_rule",
+	},
+	{
+		Group:    "powerbi.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "embeddeds",
+	}: {
+		JsonIt:       controllers.GetJSONItr(powerbiv1alpha1.GetEncoder(), powerbiv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_powerbi_embedded",
+	},
+	{
+		Group:    "private.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dnsarecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_private_dns_a_record",
+	},
+	{
+		Group:    "private.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dnsaaaarecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_private_dns_aaaa_record",
+	},
+	{
+		Group:    "private.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dnscnamerecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_private_dns_cname_record",
+	},
+	{
+		Group:    "private.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dnsmxrecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_private_dns_mx_record",
+	},
+	{
+		Group:    "private.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dnsptrrecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_private_dns_ptr_record",
+	},
+	{
+		Group:    "private.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dnssrvrecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_private_dns_srv_record",
+	},
+	{
+		Group:    "private.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dnstxtrecords",
+	}: {
+		JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_private_dns_txt_record",
+	},
+	{
+		Group:    "private.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dnszones",
+	}: {
+		JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_private_dns_zone",
+	},
+	{
+		Group:    "private.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dnszonevirtualnetworklinks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_private_dns_zone_virtual_network_link",
+	},
+	{
+		Group:    "private.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "endpoints",
+	}: {
+		JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_private_endpoint",
+	},
+	{
+		Group:    "private.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "linkservices",
+	}: {
+		JsonIt:       controllers.GetJSONItr(privatev1alpha1.GetEncoder(), privatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_private_link_service",
+	},
+	{
+		Group:    "proximity.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "placementgroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(proximityv1alpha1.GetEncoder(), proximityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_proximity_placement_group",
+	},
+	{
+		Group:    "publicip.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "publicips",
+	}: {
+		JsonIt:       controllers.GetJSONItr(publicipv1alpha1.GetEncoder(), publicipv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_public_ip",
+	},
+	{
+		Group:    "publicip.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "prefixes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(publicipv1alpha1.GetEncoder(), publicipv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_public_ip_prefix",
+	},
+	{
+		Group:    "purview.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(purviewv1alpha1.GetEncoder(), purviewv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_purview_account",
+	},
+	{
+		Group:    "recovery.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servicesvaults",
+	}: {
+		JsonIt:       controllers.GetJSONItr(recoveryv1alpha1.GetEncoder(), recoveryv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_recovery_services_vault",
+	},
+	{
+		Group:    "redis.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "caches",
+	}: {
+		JsonIt:       controllers.GetJSONItr(redisv1alpha1.GetEncoder(), redisv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_redis_cache",
+	},
+	{
+		Group:    "redis.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "enterpriseclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(redisv1alpha1.GetEncoder(), redisv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_redis_enterprise_cluster",
+	},
+	{
+		Group:    "redis.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "enterprisedatabases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(redisv1alpha1.GetEncoder(), redisv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_redis_enterprise_database",
+	},
+	{
+		Group:    "redis.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "firewallrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(redisv1alpha1.GetEncoder(), redisv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_redis_firewall_rule",
+	},
+	{
+		Group:    "redis.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "linkedservers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(redisv1alpha1.GetEncoder(), redisv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_redis_linked_server",
+	},
+	{
+		Group:    "relay.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "hybridconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(relayv1alpha1.GetEncoder(), relayv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_relay_hybrid_connection",
+	},
+	{
+		Group:    "relay.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "namespaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(relayv1alpha1.GetEncoder(), relayv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_relay_namespace",
+	},
+	{
+		Group:    "resource.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "groups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(resourcev1alpha1.GetEncoder(), resourcev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_resource_group",
+	},
+	{
+		Group:    "resource.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "grouppolicyassignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(resourcev1alpha1.GetEncoder(), resourcev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_resource_group_policy_assignment",
+	},
+	{
+		Group:    "resource.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "grouptemplatedeployments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(resourcev1alpha1.GetEncoder(), resourcev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_resource_group_template_deployment",
+	},
+	{
+		Group:    "resource.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "policyassignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(resourcev1alpha1.GetEncoder(), resourcev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_resource_policy_assignment",
+	},
+	{
+		Group:    "resource.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "providerregistrations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(resourcev1alpha1.GetEncoder(), resourcev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_resource_provider_registration",
+	},
+	{
+		Group:    "role.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "assignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(rolev1alpha1.GetEncoder(), rolev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_role_assignment",
+	},
+	{
+		Group:    "role.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "definitions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(rolev1alpha1.GetEncoder(), rolev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_role_definition",
+	},
+	{
+		Group:    "route.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "routes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(routev1alpha1.GetEncoder(), routev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_route",
+	},
+	{
+		Group:    "route.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "filters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(routev1alpha1.GetEncoder(), routev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_route_filter",
+	},
+	{
+		Group:    "route.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "tables",
+	}: {
+		JsonIt:       controllers.GetJSONItr(routev1alpha1.GetEncoder(), routev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_route_table",
+	},
+	{
+		Group:    "search.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "services",
+	}: {
+		JsonIt:       controllers.GetJSONItr(searchv1alpha1.GetEncoder(), searchv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_search_service",
+	},
+	{
+		Group:    "security.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "centerassessments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_security_center_assessment",
+	},
+	{
+		Group:    "security.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "centerassessmentmetadata",
+	}: {
+		JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_security_center_assessment_metadata",
+	},
+	{
+		Group:    "security.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "centerassessmentpolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_security_center_assessment_policy",
+	},
+	{
+		Group:    "security.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "centerautoprovisionings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_security_center_auto_provisioning",
+	},
+	{
+		Group:    "security.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "centerautomations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_security_center_automation",
+	},
+	{
+		Group:    "security.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "centercontacts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_security_center_contact",
+	},
+	{
+		Group:    "security.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "centerservervulnerabilityassessments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_security_center_server_vulnerability_assessment",
+	},
+	{
+		Group:    "security.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "centersettings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_security_center_setting",
+	},
+	{
+		Group:    "security.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "centersubscriptionpricings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_security_center_subscription_pricing",
+	},
+	{
+		Group:    "security.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "centerworkspaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(securityv1alpha1.GetEncoder(), securityv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_security_center_workspace",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "alertrulefusions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_alert_rule_fusion",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "alertrulemachinelearningbehavioranalytics",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_alert_rule_machine_learning_behavior_analytics",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "alertrulemssecurityincidents",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_alert_rule_ms_security_incident",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "alertrulescheduleds",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_alert_rule_scheduled",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dataconnectorawscloudtrails",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_data_connector_aws_cloud_trail",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dataconnectorazureactivedirectories",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_data_connector_azure_active_directory",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dataconnectorazureadvancedthreatprotections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_data_connector_azure_advanced_threat_protection",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dataconnectorazuresecuritycenters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_data_connector_azure_security_center",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dataconnectormicrosoftcloudappsecurities",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_data_connector_microsoft_cloud_app_security",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dataconnectormicrosoftdefenderadvancedthreatprotections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_data_connector_microsoft_defender_advanced_threat_protection",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dataconnectoroffice365s",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_data_connector_office_365",
+	},
+	{
+		Group:    "sentinel.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dataconnectorthreatintelligences",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sentinelv1alpha1.GetEncoder(), sentinelv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sentinel_data_connector_threat_intelligence",
+	},
+	{
+		Group:    "service.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "fabricclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicev1alpha1.GetEncoder(), servicev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_service_fabric_cluster",
+	},
+	{
+		Group:    "service.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "fabricmeshapplications",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicev1alpha1.GetEncoder(), servicev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_service_fabric_mesh_application",
+	},
+	{
+		Group:    "service.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "fabricmeshlocalnetworks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicev1alpha1.GetEncoder(), servicev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_service_fabric_mesh_local_network",
+	},
+	{
+		Group:    "service.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "fabricmeshsecrets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicev1alpha1.GetEncoder(), servicev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_service_fabric_mesh_secret",
+	},
+	{
+		Group:    "service.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "fabricmeshsecretvalues",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicev1alpha1.GetEncoder(), servicev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_service_fabric_mesh_secret_value",
+	},
+	{
+		Group:    "servicebus.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "namespaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_servicebus_namespace",
+	},
+	{
+		Group:    "servicebus.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "namespaceauthorizationrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_servicebus_namespace_authorization_rule",
+	},
+	{
+		Group:    "servicebus.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "namespacedisasterrecoveryconfigs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_servicebus_namespace_disaster_recovery_config",
+	},
+	{
+		Group:    "servicebus.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "namespacenetworkrulesets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_servicebus_namespace_network_rule_set",
+	},
+	{
+		Group:    "servicebus.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "queues",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_servicebus_queue",
+	},
+	{
+		Group:    "servicebus.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "queueauthorizationrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_servicebus_queue_authorization_rule",
+	},
+	{
+		Group:    "servicebus.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "subscriptions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_servicebus_subscription",
+	},
+	{
+		Group:    "servicebus.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "subscriptionrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_servicebus_subscription_rule",
+	},
+	{
+		Group:    "servicebus.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "topics",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_servicebus_topic",
+	},
+	{
+		Group:    "servicebus.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "topicauthorizationrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(servicebusv1alpha1.GetEncoder(), servicebusv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_servicebus_topic_authorization_rule",
+	},
+	{
+		Group:    "sharedimage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sharedimages",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sharedimagev1alpha1.GetEncoder(), sharedimagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_shared_image",
+	},
+	{
+		Group:    "sharedimage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "galleries",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sharedimagev1alpha1.GetEncoder(), sharedimagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_shared_image_gallery",
+	},
+	{
+		Group:    "sharedimage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "versions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sharedimagev1alpha1.GetEncoder(), sharedimagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_shared_image_version",
+	},
+	{
+		Group:    "signalr.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "services",
+	}: {
+		JsonIt:       controllers.GetJSONItr(signalrv1alpha1.GetEncoder(), signalrv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_signalr_service",
+	},
+	{
+		Group:    "siterecovery.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "fabrics",
+	}: {
+		JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_site_recovery_fabric",
+	},
+	{
+		Group:    "siterecovery.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "networkmappings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_site_recovery_network_mapping",
+	},
+	{
+		Group:    "siterecovery.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "protectioncontainers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_site_recovery_protection_container",
+	},
+	{
+		Group:    "siterecovery.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "protectioncontainermappings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_site_recovery_protection_container_mapping",
+	},
+	{
+		Group:    "siterecovery.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "replicatedvms",
+	}: {
+		JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_site_recovery_replicated_vm",
+	},
+	{
+		Group:    "siterecovery.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "replicationpolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(siterecoveryv1alpha1.GetEncoder(), siterecoveryv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_site_recovery_replication_policy",
+	},
+	{
+		Group:    "snapshot.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "snapshots",
+	}: {
+		JsonIt:       controllers.GetJSONItr(snapshotv1alpha1.GetEncoder(), snapshotv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_snapshot",
+	},
+	{
+		Group:    "spatial.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "anchorsaccounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(spatialv1alpha1.GetEncoder(), spatialv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_spatial_anchors_account",
+	},
+	{
+		Group:    "spring.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cloudactivedeployments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_spring_cloud_active_deployment",
+	},
+	{
+		Group:    "spring.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cloudapps",
+	}: {
+		JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_spring_cloud_app",
+	},
+	{
+		Group:    "spring.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cloudappcosmosdbassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_spring_cloud_app_cosmosdb_association",
+	},
+	{
+		Group:    "spring.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cloudappmysqlassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_spring_cloud_app_mysql_association",
+	},
+	{
+		Group:    "spring.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cloudappredisassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_spring_cloud_app_redis_association",
+	},
+	{
+		Group:    "spring.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cloudcertificates",
+	}: {
+		JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_spring_cloud_certificate",
+	},
+	{
+		Group:    "spring.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cloudcustomdomains",
+	}: {
+		JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_spring_cloud_custom_domain",
+	},
+	{
+		Group:    "spring.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cloudjavadeployments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_spring_cloud_java_deployment",
+	},
+	{
+		Group:    "spring.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "cloudservices",
+	}: {
+		JsonIt:       controllers.GetJSONItr(springv1alpha1.GetEncoder(), springv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_spring_cloud_service",
+	},
+	{
+		Group:    "sql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "activedirectoryadministrators",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sql_active_directory_administrator",
+	},
+	{
+		Group:    "sql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "databases",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sql_database",
+	},
+	{
+		Group:    "sql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "elasticpools",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sql_elasticpool",
+	},
+	{
+		Group:    "sql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "failovergroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sql_failover_group",
+	},
+	{
+		Group:    "sql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "firewallrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sql_firewall_rule",
+	},
+	{
+		Group:    "sql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "servers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sql_server",
+	},
+	{
+		Group:    "sql.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualnetworkrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sqlv1alpha1.GetEncoder(), sqlv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_sql_virtual_network_rule",
+	},
+	{
+		Group:    "ssh.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "publickeys",
+	}: {
+		JsonIt:       controllers.GetJSONItr(sshv1alpha1.GetEncoder(), sshv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_ssh_public_key",
+	},
+	{
+		Group:    "stack.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "hciclusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(stackv1alpha1.GetEncoder(), stackv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stack_hci_cluster",
+	},
+	{
+		Group:    "static.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sites",
+	}: {
+		JsonIt:       controllers.GetJSONItr(staticv1alpha1.GetEncoder(), staticv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_static_site",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accounts",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_account",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accountcustomermanagedkeys",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_account_customer_managed_key",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "accountnetworkrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_account_network_rules",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "blobs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_blob",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "blobinventorypolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_blob_inventory_policy",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "containers",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_container",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "datalakegen2filesystems",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_data_lake_gen2_filesystem",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "datalakegen2paths",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_data_lake_gen2_path",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "encryptionscopes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_encryption_scope",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "managementpolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_management_policy",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "objectreplications",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_object_replication",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "queues",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_queue",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "shares",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_share",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sharedirectories",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_share_directory",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sharefiles",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_share_file",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "syncs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_sync",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "synccloudendpoints",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_sync_cloud_endpoint",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "syncgroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_sync_group",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "tables",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_table",
+	},
+	{
+		Group:    "storage.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "tableentities",
+	}: {
+		JsonIt:       controllers.GetJSONItr(storagev1alpha1.GetEncoder(), storagev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_storage_table_entity",
+	},
+	{
+		Group:    "stream.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "analyticsfunctionjavascriptudfs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stream_analytics_function_javascript_udf",
+	},
+	{
+		Group:    "stream.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "analyticsjobs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stream_analytics_job",
+	},
+	{
+		Group:    "stream.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "analyticsoutputblobs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stream_analytics_output_blob",
+	},
+	{
+		Group:    "stream.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "analyticsoutputeventhubs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stream_analytics_output_eventhub",
+	},
+	{
+		Group:    "stream.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "analyticsoutputmssqls",
+	}: {
+		JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stream_analytics_output_mssql",
+	},
+	{
+		Group:    "stream.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "analyticsoutputservicebusqueues",
+	}: {
+		JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stream_analytics_output_servicebus_queue",
+	},
+	{
+		Group:    "stream.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "analyticsoutputservicebustopics",
+	}: {
+		JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stream_analytics_output_servicebus_topic",
+	},
+	{
+		Group:    "stream.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "analyticsreferenceinputblobs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stream_analytics_reference_input_blob",
+	},
+	{
+		Group:    "stream.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "analyticsstreaminputblobs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stream_analytics_stream_input_blob",
+	},
+	{
+		Group:    "stream.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "analyticsstreaminputeventhubs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stream_analytics_stream_input_eventhub",
+	},
+	{
+		Group:    "stream.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "analyticsstreaminputiothubs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(streamv1alpha1.GetEncoder(), streamv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_stream_analytics_stream_input_iothub",
+	},
+	{
+		Group:    "subnet.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "subnets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(subnetv1alpha1.GetEncoder(), subnetv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_subnet",
+	},
+	{
+		Group:    "subnet.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "natgatewayassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(subnetv1alpha1.GetEncoder(), subnetv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_subnet_nat_gateway_association",
+	},
+	{
+		Group:    "subnet.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "networksecuritygroupassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(subnetv1alpha1.GetEncoder(), subnetv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_subnet_network_security_group_association",
+	},
+	{
+		Group:    "subnet.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "routetableassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(subnetv1alpha1.GetEncoder(), subnetv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_subnet_route_table_association",
+	},
+	{
+		Group:    "subnet.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serviceendpointstoragepolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(subnetv1alpha1.GetEncoder(), subnetv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_subnet_service_endpoint_storage_policy",
+	},
+	{
+		Group:    "subscription.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "subscriptions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(subscriptionv1alpha1.GetEncoder(), subscriptionv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_subscription",
+	},
+	{
+		Group:    "subscription.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "policyassignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(subscriptionv1alpha1.GetEncoder(), subscriptionv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_subscription_policy_assignment",
+	},
+	{
+		Group:    "subscription.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "templatedeployments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(subscriptionv1alpha1.GetEncoder(), subscriptionv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_subscription_template_deployment",
+	},
+	{
+		Group:    "synapse.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "firewallrules",
+	}: {
+		JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_synapse_firewall_rule",
+	},
+	{
+		Group:    "synapse.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "managedprivateendpoints",
+	}: {
+		JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_synapse_managed_private_endpoint",
+	},
+	{
+		Group:    "synapse.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "roleassignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_synapse_role_assignment",
+	},
+	{
+		Group:    "synapse.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sparkpools",
+	}: {
+		JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_synapse_spark_pool",
+	},
+	{
+		Group:    "synapse.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sqlpools",
+	}: {
+		JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_synapse_sql_pool",
+	},
+	{
+		Group:    "synapse.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "workspaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(synapsev1alpha1.GetEncoder(), synapsev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_synapse_workspace",
+	},
+	{
+		Group:    "template.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "deployments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(templatev1alpha1.GetEncoder(), templatev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_template_deployment",
+	},
+	{
+		Group:    "tenant.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "templatedeployments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(tenantv1alpha1.GetEncoder(), tenantv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_tenant_template_deployment",
+	},
+	{
+		Group:    "trafficmanager.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "endpoints",
+	}: {
+		JsonIt:       controllers.GetJSONItr(trafficmanagerv1alpha1.GetEncoder(), trafficmanagerv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_traffic_manager_endpoint",
+	},
+	{
+		Group:    "trafficmanager.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "profiles",
+	}: {
+		JsonIt:       controllers.GetJSONItr(trafficmanagerv1alpha1.GetEncoder(), trafficmanagerv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_traffic_manager_profile",
+	},
+	{
+		Group:    "user.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "assignedidentities",
+	}: {
+		JsonIt:       controllers.GetJSONItr(userv1alpha1.GetEncoder(), userv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_user_assigned_identity",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "desktopapplications",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_desktop_application",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "desktopapplicationgroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_desktop_application_group",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "desktophostpools",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_desktop_host_pool",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "desktopworkspaces",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_desktop_workspace",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "desktopworkspaceapplicationgroupassociations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_desktop_workspace_application_group_association",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "hubs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_hub",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "hubbgpconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_hub_bgp_connection",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "hubconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_hub_connection",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "hubips",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_hub_ip",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "hubroutetables",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_hub_route_table",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "hubsecuritypartnerproviders",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_hub_security_partner_provider",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "machines",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_machine",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "machineconfigurationpolicyassignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_machine_configuration_policy_assignment",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "machinedatadiskattachments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_machine_data_disk_attachment",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "machineextensions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_machine_extension",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "machinescalesets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_machine_scale_set",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "machinescalesetextensions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_machine_scale_set_extension",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "networks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_network",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "networkgateways",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_network_gateway",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "networkgatewayconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_network_gateway_connection",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "networkpeerings",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_network_peering",
+	},
+	{
+		Group:    "virtual.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "wans",
+	}: {
+		JsonIt:       controllers.GetJSONItr(virtualv1alpha1.GetEncoder(), virtualv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_virtual_wan",
+	},
+	{
+		Group:    "vmware.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "clusters",
+	}: {
+		JsonIt:       controllers.GetJSONItr(vmwarev1alpha1.GetEncoder(), vmwarev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_vmware_cluster",
+	},
+	{
+		Group:    "vmware.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "expressrouteauthorizations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(vmwarev1alpha1.GetEncoder(), vmwarev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_vmware_express_route_authorization",
+	},
+	{
+		Group:    "vmware.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "privateclouds",
+	}: {
+		JsonIt:       controllers.GetJSONItr(vmwarev1alpha1.GetEncoder(), vmwarev1alpha1.GetDecoder()),
+		ResourceType: "azurerm_vmware_private_cloud",
+	},
+	{
+		Group:    "vpn.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "gateways",
+	}: {
+		JsonIt:       controllers.GetJSONItr(vpnv1alpha1.GetEncoder(), vpnv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_vpn_gateway",
+	},
+	{
+		Group:    "vpn.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "gatewayconnections",
+	}: {
+		JsonIt:       controllers.GetJSONItr(vpnv1alpha1.GetEncoder(), vpnv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_vpn_gateway_connection",
+	},
+	{
+		Group:    "vpn.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "serverconfigurations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(vpnv1alpha1.GetEncoder(), vpnv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_vpn_server_configuration",
+	},
+	{
+		Group:    "vpn.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sites",
+	}: {
+		JsonIt:       controllers.GetJSONItr(vpnv1alpha1.GetEncoder(), vpnv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_vpn_site",
+	},
+	{
+		Group:    "web.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "applicationfirewallpolicies",
+	}: {
+		JsonIt:       controllers.GetJSONItr(webv1alpha1.GetEncoder(), webv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_web_application_firewall_policy",
+	},
+	{
+		Group:    "windows.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualmachines",
+	}: {
+		JsonIt:       controllers.GetJSONItr(windowsv1alpha1.GetEncoder(), windowsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_windows_virtual_machine",
+	},
+	{
+		Group:    "windows.azurerm.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "virtualmachinescalesets",
+	}: {
+		JsonIt:       controllers.GetJSONItr(windowsv1alpha1.GetEncoder(), windowsv1alpha1.GetDecoder()),
+		ResourceType: "azurerm_windows_virtual_machine_scale_set",
+	},
+}
 
 func getJsonItAndResType(gvr schema.GroupVersionResource) Data {
 	return allJsonIt[gvr]
