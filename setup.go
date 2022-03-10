@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/gobuffalo/flect"
-	azurerm "github.com/terraform-providers/terraform-provider-azurerm/azurerm"
+	azurerm "github.com/hashicorp/terraform-provider-azurerm/azurerm"
 	auditlib "go.bytebuilders.dev/audit/lib"
 	arv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -39,6 +39,8 @@ import (
 	admissionregistrationv1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
+	aadb2cv1alpha1 "kubeform.dev/provider-azurerm-api/apis/aadb2c/v1alpha1"
+	activev1alpha1 "kubeform.dev/provider-azurerm-api/apis/active/v1alpha1"
 	advancedv1alpha1 "kubeform.dev/provider-azurerm-api/apis/advanced/v1alpha1"
 	analysisv1alpha1 "kubeform.dev/provider-azurerm-api/apis/analysis/v1alpha1"
 	apimanagementv1alpha1 "kubeform.dev/provider-azurerm-api/apis/apimanagement/v1alpha1"
@@ -95,9 +97,11 @@ import (
 	lbv1alpha1 "kubeform.dev/provider-azurerm-api/apis/lb/v1alpha1"
 	lighthousev1alpha1 "kubeform.dev/provider-azurerm-api/apis/lighthouse/v1alpha1"
 	linuxv1alpha1 "kubeform.dev/provider-azurerm-api/apis/linux/v1alpha1"
+	loadv1alpha1 "kubeform.dev/provider-azurerm-api/apis/load/v1alpha1"
 	localv1alpha1 "kubeform.dev/provider-azurerm-api/apis/local/v1alpha1"
 	loganalyticsv1alpha1 "kubeform.dev/provider-azurerm-api/apis/loganalytics/v1alpha1"
 	logicappv1alpha1 "kubeform.dev/provider-azurerm-api/apis/logicapp/v1alpha1"
+	logzv1alpha1 "kubeform.dev/provider-azurerm-api/apis/logz/v1alpha1"
 	machinev1alpha1 "kubeform.dev/provider-azurerm-api/apis/machine/v1alpha1"
 	maintenancev1alpha1 "kubeform.dev/provider-azurerm-api/apis/maintenance/v1alpha1"
 	managedv1alpha1 "kubeform.dev/provider-azurerm-api/apis/managed/v1alpha1"
@@ -154,11 +158,14 @@ import (
 	tenantv1alpha1 "kubeform.dev/provider-azurerm-api/apis/tenant/v1alpha1"
 	trafficmanagerv1alpha1 "kubeform.dev/provider-azurerm-api/apis/trafficmanager/v1alpha1"
 	userv1alpha1 "kubeform.dev/provider-azurerm-api/apis/user/v1alpha1"
+	videov1alpha1 "kubeform.dev/provider-azurerm-api/apis/video/v1alpha1"
 	virtualv1alpha1 "kubeform.dev/provider-azurerm-api/apis/virtual/v1alpha1"
 	vmwarev1alpha1 "kubeform.dev/provider-azurerm-api/apis/vmware/v1alpha1"
 	vpnv1alpha1 "kubeform.dev/provider-azurerm-api/apis/vpn/v1alpha1"
 	webv1alpha1 "kubeform.dev/provider-azurerm-api/apis/web/v1alpha1"
 	windowsv1alpha1 "kubeform.dev/provider-azurerm-api/apis/windows/v1alpha1"
+	controllersaadb2c "kubeform.dev/provider-azurerm-controller/controllers/aadb2c"
+	controllersactive "kubeform.dev/provider-azurerm-controller/controllers/active"
 	controllersadvanced "kubeform.dev/provider-azurerm-controller/controllers/advanced"
 	controllersanalysis "kubeform.dev/provider-azurerm-controller/controllers/analysis"
 	controllersapimanagement "kubeform.dev/provider-azurerm-controller/controllers/apimanagement"
@@ -215,9 +222,11 @@ import (
 	controllerslb "kubeform.dev/provider-azurerm-controller/controllers/lb"
 	controllerslighthouse "kubeform.dev/provider-azurerm-controller/controllers/lighthouse"
 	controllerslinux "kubeform.dev/provider-azurerm-controller/controllers/linux"
+	controllersload "kubeform.dev/provider-azurerm-controller/controllers/load"
 	controllerslocal "kubeform.dev/provider-azurerm-controller/controllers/local"
 	controllersloganalytics "kubeform.dev/provider-azurerm-controller/controllers/loganalytics"
 	controllerslogicapp "kubeform.dev/provider-azurerm-controller/controllers/logicapp"
+	controllerslogz "kubeform.dev/provider-azurerm-controller/controllers/logz"
 	controllersmachine "kubeform.dev/provider-azurerm-controller/controllers/machine"
 	controllersmaintenance "kubeform.dev/provider-azurerm-controller/controllers/maintenance"
 	controllersmanaged "kubeform.dev/provider-azurerm-controller/controllers/managed"
@@ -274,6 +283,7 @@ import (
 	controllerstenant "kubeform.dev/provider-azurerm-controller/controllers/tenant"
 	controllerstrafficmanager "kubeform.dev/provider-azurerm-controller/controllers/trafficmanager"
 	controllersuser "kubeform.dev/provider-azurerm-controller/controllers/user"
+	controllersvideo "kubeform.dev/provider-azurerm-controller/controllers/video"
 	controllersvirtual "kubeform.dev/provider-azurerm-controller/controllers/virtual"
 	controllersvmware "kubeform.dev/provider-azurerm-controller/controllers/vmware"
 	controllersvpn "kubeform.dev/provider-azurerm-controller/controllers/vpn"
@@ -466,6 +476,57 @@ func updateVWC(vwcClient *admissionregistrationv1.AdmissionregistrationV1Client,
 func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVersionKind, auditor *auditlib.EventPublisher, restrictToNamespace string) error {
 	switch gvk {
 	case schema.GroupVersionKind{
+		Group:   "aadb2c.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Directory",
+	}:
+		if err := (&controllersaadb2c.DirectoryReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Directory"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_aadb2c_directory"],
+			TypeName: "azurerm_aadb2c_directory",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Directory")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "active.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "DirectoryDomainService",
+	}:
+		if err := (&controllersactive.DirectoryDomainServiceReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("DirectoryDomainService"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_active_directory_domain_service"],
+			TypeName: "azurerm_active_directory_domain_service",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "DirectoryDomainService")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "active.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "DirectoryDomainServiceReplicaSet",
+	}:
+		if err := (&controllersactive.DirectoryDomainServiceReplicaSetReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("DirectoryDomainServiceReplicaSet"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_active_directory_domain_service_replica_set"],
+			TypeName: "azurerm_active_directory_domain_service_replica_set",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "DirectoryDomainServiceReplicaSet")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "advanced.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "ThreatProtection",
@@ -621,6 +682,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "apimanagement.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ApiRelease",
+	}:
+		if err := (&controllersapimanagement.ApiReleaseReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ApiRelease"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_api_management_api_release"],
+			TypeName: "azurerm_api_management_api_release",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ApiRelease")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ApiSchema",
 	}:
 		if err := (&controllersapimanagement.ApiSchemaReconciler{
@@ -633,6 +711,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_api_management_api_schema",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ApiSchema")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ApiTag",
+	}:
+		if err := (&controllersapimanagement.ApiTagReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ApiTag"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_api_management_api_tag"],
+			TypeName: "azurerm_api_management_api_tag",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ApiTag")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -752,6 +847,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_api_management_email_template",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EmailTemplate")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Gateway",
+	}:
+		if err := (&controllersapimanagement.GatewayReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Gateway"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_api_management_gateway"],
+			TypeName: "azurerm_api_management_gateway",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Gateway")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "GatewayAPI",
+	}:
+		if err := (&controllersapimanagement.GatewayAPIReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("GatewayAPI"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_api_management_gateway_api"],
+			TypeName: "azurerm_api_management_gateway_api",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "GatewayAPI")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -927,6 +1056,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "apimanagement.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "NotificationRecipientEmail",
+	}:
+		if err := (&controllersapimanagement.NotificationRecipientEmailReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("NotificationRecipientEmail"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_api_management_notification_recipient_email"],
+			TypeName: "azurerm_api_management_notification_recipient_email",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "NotificationRecipientEmail")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "NotificationRecipientUser",
+	}:
+		if err := (&controllersapimanagement.NotificationRecipientUserReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("NotificationRecipientUser"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_api_management_notification_recipient_user"],
+			TypeName: "azurerm_api_management_notification_recipient_user",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "NotificationRecipientUser")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "OpenidConnectProvider",
 	}:
 		if err := (&controllersapimanagement.OpenidConnectProviderReconciler{
@@ -1080,6 +1243,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "apimanagement.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "Tag",
+	}:
+		if err := (&controllersapimanagement.TagReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Tag"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_api_management_tag"],
+			TypeName: "azurerm_api_management_tag",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Tag")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "User",
 	}:
 		if err := (&controllersapimanagement.UserReconciler{
@@ -1109,6 +1289,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_app_configuration",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Configuration")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "app.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ConfigurationFeature",
+	}:
+		if err := (&controllersapp.ConfigurationFeatureReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ConfigurationFeature"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_app_configuration_feature"],
+			TypeName: "azurerm_app_configuration_feature",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ConfigurationFeature")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "app.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ConfigurationKey",
+	}:
+		if err := (&controllersapp.ConfigurationKeyReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ConfigurationKey"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_app_configuration_key"],
+			TypeName: "azurerm_app_configuration_key",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ConfigurationKey")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -1301,6 +1515,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "app.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ServicePublicCertificate",
+	}:
+		if err := (&controllersapp.ServicePublicCertificateReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ServicePublicCertificate"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_app_service_public_certificate"],
+			TypeName: "azurerm_app_service_public_certificate",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ServicePublicCertificate")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "app.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ServiceSlot",
 	}:
 		if err := (&controllersapp.ServiceSlotReconciler{
@@ -1313,6 +1544,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_app_service_slot",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ServiceSlot")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "app.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ServiceSlotCustomHostnameBinding",
+	}:
+		if err := (&controllersapp.ServiceSlotCustomHostnameBindingReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ServiceSlotCustomHostnameBinding"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_app_service_slot_custom_hostname_binding"],
+			TypeName: "azurerm_app_service_slot_custom_hostname_binding",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ServiceSlotCustomHostnameBinding")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -1792,6 +2040,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "automation.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Webhook",
+	}:
+		if err := (&controllersautomation.WebhookReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Webhook"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_automation_webhook"],
+			TypeName: "azurerm_automation_webhook",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Webhook")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "availability.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Set",
@@ -1964,6 +2229,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "batch.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "Job",
+	}:
+		if err := (&controllersbatch.JobReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Job"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_batch_job"],
+			TypeName: "azurerm_batch_job",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Job")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "batch.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Pool",
 	}:
 		if err := (&controllersbatch.PoolReconciler{
@@ -1993,6 +2275,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_blueprint_assignment",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Assignment")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ChannelAlexa",
+	}:
+		if err := (&controllersbot.ChannelAlexaReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ChannelAlexa"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_bot_channel_alexa"],
+			TypeName: "azurerm_bot_channel_alexa",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ChannelAlexa")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ChannelDirectLineSpeech",
+	}:
+		if err := (&controllersbot.ChannelDirectLineSpeechReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ChannelDirectLineSpeech"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_bot_channel_direct_line_speech"],
+			TypeName: "azurerm_bot_channel_direct_line_speech",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ChannelDirectLineSpeech")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -2032,6 +2348,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "bot.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ChannelFacebook",
+	}:
+		if err := (&controllersbot.ChannelFacebookReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ChannelFacebook"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_bot_channel_facebook"],
+			TypeName: "azurerm_bot_channel_facebook",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ChannelFacebook")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ChannelLine",
+	}:
+		if err := (&controllersbot.ChannelLineReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ChannelLine"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_bot_channel_line"],
+			TypeName: "azurerm_bot_channel_line",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ChannelLine")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ChannelMsTeams",
 	}:
 		if err := (&controllersbot.ChannelMsTeamsReconciler{
@@ -2061,6 +2411,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_bot_channel_slack",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ChannelSlack")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ChannelSms",
+	}:
+		if err := (&controllersbot.ChannelSmsReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ChannelSms"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_bot_channel_sms"],
+			TypeName: "azurerm_bot_channel_sms",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ChannelSms")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ChannelWebChat",
+	}:
+		if err := (&controllersbot.ChannelWebChatReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ChannelWebChat"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_bot_channel_web_chat"],
+			TypeName: "azurerm_bot_channel_web_chat",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ChannelWebChat")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -2100,6 +2484,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "bot.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ServiceAzureBot",
+	}:
+		if err := (&controllersbot.ServiceAzureBotReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ServiceAzureBot"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_bot_service_azure_bot"],
+			TypeName: "azurerm_bot_service_azure_bot",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ServiceAzureBot")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "WebApp",
 	}:
 		if err := (&controllersbot.WebAppReconciler{
@@ -2129,6 +2530,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_cdn_endpoint",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Endpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "cdn.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "EndpointCustomDomain",
+	}:
+		if err := (&controllerscdn.EndpointCustomDomainReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("EndpointCustomDomain"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_cdn_endpoint_custom_domain"],
+			TypeName: "azurerm_cdn_endpoint_custom_domain",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "EndpointCustomDomain")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -2166,6 +2584,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "cognitive.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AccountCustomerManagedKey",
+	}:
+		if err := (&controllerscognitive.AccountCustomerManagedKeyReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("AccountCustomerManagedKey"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_cognitive_account_customer_managed_key"],
+			TypeName: "azurerm_cognitive_account_customer_managed_key",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AccountCustomerManagedKey")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "communication.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Service",
@@ -2180,6 +2615,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_communication_service",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Service")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "consumption.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "BudgetManagementGroup",
+	}:
+		if err := (&controllersconsumption.BudgetManagementGroupReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("BudgetManagementGroup"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_consumption_budget_management_group"],
+			TypeName: "azurerm_consumption_budget_management_group",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "BudgetManagementGroup")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -2270,6 +2722,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "container.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "RegistryTask",
+	}:
+		if err := (&controllerscontainer.RegistryTaskReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("RegistryTask"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_container_registry_task"],
+			TypeName: "azurerm_container_registry_task",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "RegistryTask")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "container.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "RegistryToken",
 	}:
 		if err := (&controllerscontainer.RegistryTokenReconciler{
@@ -2316,6 +2785,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_cosmosdb_account",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Account")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "cosmosdb.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "CassandraCluster",
+	}:
+		if err := (&controllerscosmosdb.CassandraClusterReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("CassandraCluster"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_cosmosdb_cassandra_cluster"],
+			TypeName: "azurerm_cosmosdb_cassandra_cluster",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "CassandraCluster")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "cosmosdb.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "CassandraDatacenter",
+	}:
+		if err := (&controllerscosmosdb.CassandraDatacenterReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("CassandraDatacenter"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_cosmosdb_cassandra_datacenter"],
+			TypeName: "azurerm_cosmosdb_cassandra_datacenter",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "CassandraDatacenter")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -2610,6 +3113,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "data.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FactoryCustomDataset",
+	}:
+		if err := (&controllersdata.FactoryCustomDatasetReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FactoryCustomDataset"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_factory_custom_dataset"],
+			TypeName: "azurerm_data_factory_custom_dataset",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FactoryCustomDataset")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FactoryDataFlow",
+	}:
+		if err := (&controllersdata.FactoryDataFlowReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDataFlow"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_factory_data_flow"],
+			TypeName: "azurerm_data_factory_data_flow",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FactoryDataFlow")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "FactoryDatasetAzureBlob",
 	}:
 		if err := (&controllersdata.FactoryDatasetAzureBlobReconciler{
@@ -2622,6 +3159,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_data_factory_dataset_azure_blob",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetAzureBlob")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FactoryDatasetBinary",
+	}:
+		if err := (&controllersdata.FactoryDatasetBinaryReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FactoryDatasetBinary"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_factory_dataset_binary"],
+			TypeName: "azurerm_data_factory_dataset_binary",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FactoryDatasetBinary")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -3001,6 +3555,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "data.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FactoryLinkedServiceCosmosdbMongoapi",
+	}:
+		if err := (&controllersdata.FactoryLinkedServiceCosmosdbMongoapiReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceCosmosdbMongoapi"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_factory_linked_service_cosmosdb_mongoapi"],
+			TypeName: "azurerm_data_factory_linked_service_cosmosdb_mongoapi",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceCosmosdbMongoapi")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "FactoryLinkedServiceDataLakeStorageGen2",
 	}:
 		if err := (&controllersdata.FactoryLinkedServiceDataLakeStorageGen2Reconciler{
@@ -3081,6 +3652,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_data_factory_linked_service_odata",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceOdata")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FactoryLinkedServiceOdbc",
+	}:
+		if err := (&controllersdata.FactoryLinkedServiceOdbcReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FactoryLinkedServiceOdbc"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_factory_linked_service_odbc"],
+			TypeName: "azurerm_data_factory_linked_service_odbc",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FactoryLinkedServiceOdbc")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -3188,6 +3776,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "data.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FactoryManagedPrivateEndpoint",
+	}:
+		if err := (&controllersdata.FactoryManagedPrivateEndpointReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FactoryManagedPrivateEndpoint"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_factory_managed_private_endpoint"],
+			TypeName: "azurerm_data_factory_managed_private_endpoint",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FactoryManagedPrivateEndpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "FactoryPipeline",
 	}:
 		if err := (&controllersdata.FactoryPipelineReconciler{
@@ -3222,6 +3827,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "data.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FactoryTriggerCustomEvent",
+	}:
+		if err := (&controllersdata.FactoryTriggerCustomEventReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FactoryTriggerCustomEvent"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_factory_trigger_custom_event"],
+			TypeName: "azurerm_data_factory_trigger_custom_event",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FactoryTriggerCustomEvent")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "FactoryTriggerSchedule",
 	}:
 		if err := (&controllersdata.FactoryTriggerScheduleReconciler{
@@ -3234,6 +3856,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_data_factory_trigger_schedule",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FactoryTriggerSchedule")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FactoryTriggerTumblingWindow",
+	}:
+		if err := (&controllersdata.FactoryTriggerTumblingWindowReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FactoryTriggerTumblingWindow"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_factory_trigger_tumbling_window"],
+			TypeName: "azurerm_data_factory_trigger_tumbling_window",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FactoryTriggerTumblingWindow")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -3341,6 +3980,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "data.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ProtectionBackupInstanceBlobStorage",
+	}:
+		if err := (&controllersdata.ProtectionBackupInstanceBlobStorageReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ProtectionBackupInstanceBlobStorage"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_protection_backup_instance_blob_storage"],
+			TypeName: "azurerm_data_protection_backup_instance_blob_storage",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ProtectionBackupInstanceBlobStorage")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ProtectionBackupInstanceDisk",
+	}:
+		if err := (&controllersdata.ProtectionBackupInstanceDiskReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ProtectionBackupInstanceDisk"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_protection_backup_instance_disk"],
+			TypeName: "azurerm_data_protection_backup_instance_disk",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ProtectionBackupInstanceDisk")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ProtectionBackupInstancePostgresql",
 	}:
 		if err := (&controllersdata.ProtectionBackupInstancePostgresqlReconciler{
@@ -3353,6 +4026,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_data_protection_backup_instance_postgresql",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ProtectionBackupInstancePostgresql")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ProtectionBackupPolicyBlobStorage",
+	}:
+		if err := (&controllersdata.ProtectionBackupPolicyBlobStorageReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ProtectionBackupPolicyBlobStorage"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_protection_backup_policy_blob_storage"],
+			TypeName: "azurerm_data_protection_backup_policy_blob_storage",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ProtectionBackupPolicyBlobStorage")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ProtectionBackupPolicyDisk",
+	}:
+		if err := (&controllersdata.ProtectionBackupPolicyDiskReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ProtectionBackupPolicyDisk"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_data_protection_backup_policy_disk"],
+			TypeName: "azurerm_data_protection_backup_policy_disk",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ProtectionBackupPolicyDisk")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -3591,6 +4298,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_databricks_workspace",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Workspace")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "databricks.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceCustomerManagedKey",
+	}:
+		if err := (&controllersdatabricks.WorkspaceCustomerManagedKeyReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("WorkspaceCustomerManagedKey"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_databricks_workspace_customer_managed_key"],
+			TypeName: "azurerm_databricks_workspace_customer_managed_key",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "WorkspaceCustomerManagedKey")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -3880,6 +4604,74 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_disk_encryption_set",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "EncryptionSet")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "disk.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Pool",
+	}:
+		if err := (&controllersdisk.PoolReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Pool"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_disk_pool"],
+			TypeName: "azurerm_disk_pool",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Pool")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "disk.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PoolIscsiTarget",
+	}:
+		if err := (&controllersdisk.PoolIscsiTargetReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("PoolIscsiTarget"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_disk_pool_iscsi_target"],
+			TypeName: "azurerm_disk_pool_iscsi_target",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "PoolIscsiTarget")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "disk.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PoolIscsiTargetLun",
+	}:
+		if err := (&controllersdisk.PoolIscsiTargetLunReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("PoolIscsiTargetLun"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_disk_pool_iscsi_target_lun"],
+			TypeName: "azurerm_disk_pool_iscsi_target_lun",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "PoolIscsiTargetLun")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "disk.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PoolManagedDiskAttachment",
+	}:
+		if err := (&controllersdisk.PoolManagedDiskAttachmentReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("PoolManagedDiskAttachment"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_disk_pool_managed_disk_attachment"],
+			TypeName: "azurerm_disk_pool_managed_disk_attachment",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "PoolManagedDiskAttachment")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -4563,6 +5355,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "frontdoor.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "RulesEngine",
+	}:
+		if err := (&controllersfrontdoor.RulesEngineReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("RulesEngine"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_frontdoor_rules_engine"],
+			TypeName: "azurerm_frontdoor_rules_engine",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "RulesEngine")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "function.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "App",
@@ -4939,6 +5748,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "iottime.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "SeriesInsightsEventSourceEventhub",
+	}:
+		if err := (&controllersiottime.SeriesInsightsEventSourceEventhubReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("SeriesInsightsEventSourceEventhub"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_iot_time_series_insights_event_source_eventhub"],
+			TypeName: "azurerm_iot_time_series_insights_event_source_eventhub",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SeriesInsightsEventSourceEventhub")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "iottime.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "SeriesInsightsEventSourceIothub",
 	}:
 		if err := (&controllersiottime.SeriesInsightsEventSourceIothubReconciler{
@@ -5036,6 +5862,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_iothub",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Iothub")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "iothub.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Certificate",
+	}:
+		if err := (&controllersiothub.CertificateReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Certificate"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_iothub_certificate"],
+			TypeName: "azurerm_iothub_certificate",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Certificate")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -5364,6 +6207,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "keyvault.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ManagedStorageAccount",
+	}:
+		if err := (&controllerskeyvault.ManagedStorageAccountReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ManagedStorageAccount"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_key_vault_managed_storage_account"],
+			TypeName: "azurerm_key_vault_managed_storage_account",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ManagedStorageAccount")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "keyvault.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedStorageAccountSasTokenDefinition",
+	}:
+		if err := (&controllerskeyvault.ManagedStorageAccountSasTokenDefinitionReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ManagedStorageAccountSasTokenDefinition"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_key_vault_managed_storage_account_sas_token_definition"],
+			TypeName: "azurerm_key_vault_managed_storage_account_sas_token_definition",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ManagedStorageAccountSasTokenDefinition")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "keyvault.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Secret",
 	}:
 		if err := (&controllerskeyvault.SecretReconciler{
@@ -5583,6 +6460,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "kusto.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Script",
+	}:
+		if err := (&controllerskusto.ScriptReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Script"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_kusto_script"],
+			TypeName: "azurerm_kusto_script",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Script")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "lb.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Lb",
@@ -5784,6 +6678,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_linux_virtual_machine_scale_set",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "VirtualMachineScaleSet")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "load.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Loadtest",
+	}:
+		if err := (&controllersload.LoadtestReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Loadtest"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_load_test"],
+			TypeName: "azurerm_load_test",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Loadtest")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -6044,6 +6955,159 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "logicapp.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "IntegrationAccountAgreement",
+	}:
+		if err := (&controllerslogicapp.IntegrationAccountAgreementReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("IntegrationAccountAgreement"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_logic_app_integration_account_agreement"],
+			TypeName: "azurerm_logic_app_integration_account_agreement",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "IntegrationAccountAgreement")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountAssembly",
+	}:
+		if err := (&controllerslogicapp.IntegrationAccountAssemblyReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("IntegrationAccountAssembly"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_logic_app_integration_account_assembly"],
+			TypeName: "azurerm_logic_app_integration_account_assembly",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "IntegrationAccountAssembly")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountBatchConfiguration",
+	}:
+		if err := (&controllerslogicapp.IntegrationAccountBatchConfigurationReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("IntegrationAccountBatchConfiguration"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_logic_app_integration_account_batch_configuration"],
+			TypeName: "azurerm_logic_app_integration_account_batch_configuration",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "IntegrationAccountBatchConfiguration")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountCertificate",
+	}:
+		if err := (&controllerslogicapp.IntegrationAccountCertificateReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("IntegrationAccountCertificate"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_logic_app_integration_account_certificate"],
+			TypeName: "azurerm_logic_app_integration_account_certificate",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "IntegrationAccountCertificate")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountMap",
+	}:
+		if err := (&controllerslogicapp.IntegrationAccountMapReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("IntegrationAccountMap"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_logic_app_integration_account_map"],
+			TypeName: "azurerm_logic_app_integration_account_map",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "IntegrationAccountMap")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountPartner",
+	}:
+		if err := (&controllerslogicapp.IntegrationAccountPartnerReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("IntegrationAccountPartner"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_logic_app_integration_account_partner"],
+			TypeName: "azurerm_logic_app_integration_account_partner",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "IntegrationAccountPartner")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountSchema",
+	}:
+		if err := (&controllerslogicapp.IntegrationAccountSchemaReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("IntegrationAccountSchema"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_logic_app_integration_account_schema"],
+			TypeName: "azurerm_logic_app_integration_account_schema",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "IntegrationAccountSchema")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountSession",
+	}:
+		if err := (&controllerslogicapp.IntegrationAccountSessionReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("IntegrationAccountSession"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_logic_app_integration_account_session"],
+			TypeName: "azurerm_logic_app_integration_account_session",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "IntegrationAccountSession")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Standard",
+	}:
+		if err := (&controllerslogicapp.StandardReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Standard"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_logic_app_standard"],
+			TypeName: "azurerm_logic_app_standard",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Standard")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "TriggerCustom",
 	}:
 		if err := (&controllerslogicapp.TriggerCustomReconciler{
@@ -6110,6 +7174,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "logz.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Monitor",
+	}:
+		if err := (&controllerslogz.MonitorReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Monitor"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_logz_monitor"],
+			TypeName: "azurerm_logz_monitor",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Monitor")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logz.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "TagRule",
+	}:
+		if err := (&controllerslogz.TagRuleReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("TagRule"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_logz_tag_rule"],
+			TypeName: "azurerm_logz_tag_rule",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "TagRule")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "machine.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "LearningComputeCluster",
@@ -6129,6 +7227,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "machine.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "LearningComputeInstance",
+	}:
+		if err := (&controllersmachine.LearningComputeInstanceReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("LearningComputeInstance"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_machine_learning_compute_instance"],
+			TypeName: "azurerm_machine_learning_compute_instance",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "LearningComputeInstance")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "machine.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "LearningInferenceCluster",
 	}:
 		if err := (&controllersmachine.LearningInferenceClusterReconciler{
@@ -6141,6 +7256,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_machine_learning_inference_cluster",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "LearningInferenceCluster")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "machine.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "LearningSynapseSpark",
+	}:
+		if err := (&controllersmachine.LearningSynapseSparkReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("LearningSynapseSpark"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_machine_learning_synapse_spark"],
+			TypeName: "azurerm_machine_learning_synapse_spark",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "LearningSynapseSpark")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -6192,6 +7324,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_maintenance_assignment_virtual_machine",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AssignmentVirtualMachine")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "maintenance.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AssignmentVirtualMachineScaleSet",
+	}:
+		if err := (&controllersmaintenance.AssignmentVirtualMachineScaleSetReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("AssignmentVirtualMachineScaleSet"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_maintenance_assignment_virtual_machine_scale_set"],
+			TypeName: "azurerm_maintenance_assignment_virtual_machine_scale_set",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AssignmentVirtualMachineScaleSet")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -6362,6 +7511,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_maps_account",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Account")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "maps.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Creator",
+	}:
+		if err := (&controllersmaps.CreatorReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Creator"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_maps_creator"],
+			TypeName: "azurerm_maps_creator",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Creator")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -6809,6 +7975,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "monitor.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "PrivateLinkScope",
+	}:
+		if err := (&controllersmonitor.PrivateLinkScopeReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("PrivateLinkScope"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_monitor_private_link_scope"],
+			TypeName: "azurerm_monitor_private_link_scope",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "PrivateLinkScope")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "monitor.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PrivateLinkScopedService",
+	}:
+		if err := (&controllersmonitor.PrivateLinkScopedServiceReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("PrivateLinkScopedService"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_monitor_private_link_scoped_service"],
+			TypeName: "azurerm_monitor_private_link_scoped_service",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "PrivateLinkScopedService")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "monitor.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ScheduledQueryRulesAlert",
 	}:
 		if err := (&controllersmonitor.ScheduledQueryRulesAlertReconciler{
@@ -6928,6 +8128,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "mssql.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FailoverGroup",
+	}:
+		if err := (&controllersmssql.FailoverGroupReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FailoverGroup"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_mssql_failover_group"],
+			TypeName: "azurerm_mssql_failover_group",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FailoverGroup")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "FirewallRule",
 	}:
 		if err := (&controllersmssql.FirewallRuleReconciler{
@@ -6974,6 +8191,91 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_mssql_job_credential",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "JobCredential")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedDatabase",
+	}:
+		if err := (&controllersmssql.ManagedDatabaseReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ManagedDatabase"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_mssql_managed_database"],
+			TypeName: "azurerm_mssql_managed_database",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ManagedDatabase")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstance",
+	}:
+		if err := (&controllersmssql.ManagedInstanceReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ManagedInstance"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_mssql_managed_instance"],
+			TypeName: "azurerm_mssql_managed_instance",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ManagedInstance")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstanceActiveDirectoryAdministrator",
+	}:
+		if err := (&controllersmssql.ManagedInstanceActiveDirectoryAdministratorReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ManagedInstanceActiveDirectoryAdministrator"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_mssql_managed_instance_active_directory_administrator"],
+			TypeName: "azurerm_mssql_managed_instance_active_directory_administrator",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ManagedInstanceActiveDirectoryAdministrator")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstanceFailoverGroup",
+	}:
+		if err := (&controllersmssql.ManagedInstanceFailoverGroupReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ManagedInstanceFailoverGroup"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_mssql_managed_instance_failover_group"],
+			TypeName: "azurerm_mssql_managed_instance_failover_group",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ManagedInstanceFailoverGroup")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "OutboundFirewallRule",
+	}:
+		if err := (&controllersmssql.OutboundFirewallRuleReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("OutboundFirewallRule"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_mssql_outbound_firewall_rule"],
+			TypeName: "azurerm_mssql_outbound_firewall_rule",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "OutboundFirewallRule")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -7166,6 +8468,74 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "mysql.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FlexibleDatabase",
+	}:
+		if err := (&controllersmysql.FlexibleDatabaseReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FlexibleDatabase"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_mysql_flexible_database"],
+			TypeName: "azurerm_mysql_flexible_database",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FlexibleDatabase")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mysql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FlexibleServer",
+	}:
+		if err := (&controllersmysql.FlexibleServerReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FlexibleServer"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_mysql_flexible_server"],
+			TypeName: "azurerm_mysql_flexible_server",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FlexibleServer")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mysql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FlexibleServerConfiguration",
+	}:
+		if err := (&controllersmysql.FlexibleServerConfigurationReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FlexibleServerConfiguration"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_mysql_flexible_server_configuration"],
+			TypeName: "azurerm_mysql_flexible_server_configuration",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FlexibleServerConfiguration")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mysql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FlexibleServerFirewallRule",
+	}:
+		if err := (&controllersmysql.FlexibleServerFirewallRuleReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FlexibleServerFirewallRule"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_mysql_flexible_server_firewall_rule"],
+			TypeName: "azurerm_mysql_flexible_server_firewall_rule",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FlexibleServerFirewallRule")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mysql.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Server",
 	}:
 		if err := (&controllersmysql.ServerReconciler{
@@ -7314,6 +8684,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_netapp_snapshot",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Snapshot")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "netapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SnapshotPolicy",
+	}:
+		if err := (&controllersnetapp.SnapshotPolicyReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("SnapshotPolicy"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_netapp_snapshot_policy"],
+			TypeName: "azurerm_netapp_snapshot_policy",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SnapshotPolicy")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -7742,6 +9129,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "policy.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "VirtualMachineConfigurationAssignment",
+	}:
+		if err := (&controllerspolicy.VirtualMachineConfigurationAssignmentReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("VirtualMachineConfigurationAssignment"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_policy_virtual_machine_configuration_assignment"],
+			TypeName: "azurerm_policy_virtual_machine_configuration_assignment",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "VirtualMachineConfigurationAssignment")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "portal.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "TenantConfiguration",
@@ -7841,6 +9245,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_postgresql_flexible_server",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FlexibleServer")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "postgresql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FlexibleServerConfiguration",
+	}:
+		if err := (&controllerspostgresql.FlexibleServerConfigurationReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FlexibleServerConfiguration"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_postgresql_flexible_server_configuration"],
+			TypeName: "azurerm_postgresql_flexible_server_configuration",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FlexibleServerConfiguration")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "postgresql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FlexibleServerDatabase",
+	}:
+		if err := (&controllerspostgresql.FlexibleServerDatabaseReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FlexibleServerDatabase"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_postgresql_flexible_server_database"],
+			TypeName: "azurerm_postgresql_flexible_server_database",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FlexibleServerDatabase")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -8305,6 +9743,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "relay.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "HybridConnectionAuthorizationRule",
+	}:
+		if err := (&controllersrelay.HybridConnectionAuthorizationRuleReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("HybridConnectionAuthorizationRule"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_relay_hybrid_connection_authorization_rule"],
+			TypeName: "azurerm_relay_hybrid_connection_authorization_rule",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "HybridConnectionAuthorizationRule")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "relay.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Namespace",
 	}:
 		if err := (&controllersrelay.NamespaceReconciler{
@@ -8317,6 +9772,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_relay_namespace",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Namespace")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "relay.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "NamespaceAuthorizationRule",
+	}:
+		if err := (&controllersrelay.NamespaceAuthorizationRuleReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("NamespaceAuthorizationRule"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_relay_namespace_authorization_rule"],
+			TypeName: "azurerm_relay_namespace_authorization_rule",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "NamespaceAuthorizationRule")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -8334,6 +9806,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_resource_group",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Group")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "resource.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "GroupCostManagementExport",
+	}:
+		if err := (&controllersresource.GroupCostManagementExportReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("GroupCostManagementExport"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_resource_group_cost_management_export"],
+			TypeName: "azurerm_resource_group_cost_management_export",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "GroupCostManagementExport")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -8747,6 +10236,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "sentinel.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "AutomationRule",
+	}:
+		if err := (&controllerssentinel.AutomationRuleReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("AutomationRule"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_sentinel_automation_rule"],
+			TypeName: "azurerm_sentinel_automation_rule",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AutomationRule")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sentinel.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "DataConnectorAwsCloudTrail",
 	}:
 		if err := (&controllerssentinel.DataConnectorAwsCloudTrailReconciler{
@@ -8881,6 +10387,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "sentinel.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Watchlist",
+	}:
+		if err := (&controllerssentinel.WatchlistReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Watchlist"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_sentinel_watchlist"],
+			TypeName: "azurerm_sentinel_watchlist",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Watchlist")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sentinel.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WatchlistItem",
+	}:
+		if err := (&controllerssentinel.WatchlistItemReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("WatchlistItem"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_sentinel_watchlist_item"],
+			TypeName: "azurerm_sentinel_watchlist_item",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "WatchlistItem")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "service.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "FabricCluster",
@@ -8895,6 +10435,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_service_fabric_cluster",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FabricCluster")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "service.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FabricManagedCluster",
+	}:
+		if err := (&controllersservice.FabricManagedClusterReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("FabricManagedCluster"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_service_fabric_managed_cluster"],
+			TypeName: "azurerm_service_fabric_managed_cluster",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "FabricManagedCluster")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -9204,6 +10761,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "signalr.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ServiceNetworkACL",
+	}:
+		if err := (&controllerssignalr.ServiceNetworkACLReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ServiceNetworkACL"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_signalr_service_network_acl"],
+			TypeName: "azurerm_signalr_service_network_acl",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ServiceNetworkACL")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "siterecovery.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Fabric",
@@ -9493,6 +11067,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "spring.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "CloudStorage",
+	}:
+		if err := (&controllersspring.CloudStorageReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("CloudStorage"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_spring_cloud_storage"],
+			TypeName: "azurerm_spring_cloud_storage",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "CloudStorage")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "sql.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "ActiveDirectoryAdministrator",
@@ -9580,6 +11171,74 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "sql.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ManagedDatabase",
+	}:
+		if err := (&controllerssql.ManagedDatabaseReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ManagedDatabase"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_sql_managed_database"],
+			TypeName: "azurerm_sql_managed_database",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ManagedDatabase")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstance",
+	}:
+		if err := (&controllerssql.ManagedInstanceReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ManagedInstance"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_sql_managed_instance"],
+			TypeName: "azurerm_sql_managed_instance",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ManagedInstance")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstanceActiveDirectoryAdministrator",
+	}:
+		if err := (&controllerssql.ManagedInstanceActiveDirectoryAdministratorReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ManagedInstanceActiveDirectoryAdministrator"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_sql_managed_instance_active_directory_administrator"],
+			TypeName: "azurerm_sql_managed_instance_active_directory_administrator",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ManagedInstanceActiveDirectoryAdministrator")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstanceFailoverGroup",
+	}:
+		if err := (&controllerssql.ManagedInstanceFailoverGroupReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ManagedInstanceFailoverGroup"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_sql_managed_instance_failover_group"],
+			TypeName: "azurerm_sql_managed_instance_failover_group",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ManagedInstanceFailoverGroup")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sql.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Server",
 	}:
 		if err := (&controllerssql.ServerReconciler{
@@ -9660,6 +11319,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_static_site",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Site")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "static.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SiteCustomDomain",
+	}:
+		if err := (&controllersstatic.SiteCustomDomainReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("SiteCustomDomain"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_static_site_custom_domain"],
+			TypeName: "azurerm_static_site_custom_domain",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SiteCustomDomain")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -9796,6 +11472,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_storage_data_lake_gen2_path",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DataLakeGen2Path")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "storage.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "DisksPool",
+	}:
+		if err := (&controllersstorage.DisksPoolReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("DisksPool"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_storage_disks_pool"],
+			TypeName: "azurerm_storage_disks_pool",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "DisksPool")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -10005,6 +11698,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "stream.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "AnalyticsCluster",
+	}:
+		if err := (&controllersstream.AnalyticsClusterReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsCluster"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_stream_analytics_cluster"],
+			TypeName: "azurerm_stream_analytics_cluster",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsCluster")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "AnalyticsFunctionJavascriptUdf",
 	}:
 		if err := (&controllersstream.AnalyticsFunctionJavascriptUdfReconciler{
@@ -10039,6 +11749,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "stream.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "AnalyticsManagedPrivateEndpoint",
+	}:
+		if err := (&controllersstream.AnalyticsManagedPrivateEndpointReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsManagedPrivateEndpoint"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_stream_analytics_managed_private_endpoint"],
+			TypeName: "azurerm_stream_analytics_managed_private_endpoint",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsManagedPrivateEndpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "AnalyticsOutputBlob",
 	}:
 		if err := (&controllersstream.AnalyticsOutputBlobReconciler{
@@ -10068,6 +11795,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_stream_analytics_output_eventhub",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsOutputEventhub")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AnalyticsOutputFunction",
+	}:
+		if err := (&controllersstream.AnalyticsOutputFunctionReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsOutputFunction"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_stream_analytics_output_function"],
+			TypeName: "azurerm_stream_analytics_output_function",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsOutputFunction")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -10124,6 +11868,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "stream.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "AnalyticsOutputSynapse",
+	}:
+		if err := (&controllersstream.AnalyticsOutputSynapseReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsOutputSynapse"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_stream_analytics_output_synapse"],
+			TypeName: "azurerm_stream_analytics_output_synapse",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsOutputSynapse")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AnalyticsOutputTable",
+	}:
+		if err := (&controllersstream.AnalyticsOutputTableReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsOutputTable"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_stream_analytics_output_table"],
+			TypeName: "azurerm_stream_analytics_output_table",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsOutputTable")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "AnalyticsReferenceInputBlob",
 	}:
 		if err := (&controllersstream.AnalyticsReferenceInputBlobReconciler{
@@ -10136,6 +11914,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_stream_analytics_reference_input_blob",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsReferenceInputBlob")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AnalyticsReferenceInputMssql",
+	}:
+		if err := (&controllersstream.AnalyticsReferenceInputMssqlReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("AnalyticsReferenceInputMssql"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_stream_analytics_reference_input_mssql"],
+			TypeName: "azurerm_stream_analytics_reference_input_mssql",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AnalyticsReferenceInputMssql")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -10294,6 +12089,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "subscription.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "CostManagementExport",
+	}:
+		if err := (&controllerssubscription.CostManagementExportReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("CostManagementExport"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_subscription_cost_management_export"],
+			TypeName: "azurerm_subscription_cost_management_export",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "CostManagementExport")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "subscription.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "PolicyAssignment",
 	}:
 		if err := (&controllerssubscription.PolicyAssignmentReconciler{
@@ -10345,6 +12157,57 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "synapse.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "IntegrationRuntimeAzure",
+	}:
+		if err := (&controllerssynapse.IntegrationRuntimeAzureReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("IntegrationRuntimeAzure"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_integration_runtime_azure"],
+			TypeName: "azurerm_synapse_integration_runtime_azure",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "IntegrationRuntimeAzure")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationRuntimeSelfHosted",
+	}:
+		if err := (&controllerssynapse.IntegrationRuntimeSelfHostedReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("IntegrationRuntimeSelfHosted"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_integration_runtime_self_hosted"],
+			TypeName: "azurerm_synapse_integration_runtime_self_hosted",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "IntegrationRuntimeSelfHosted")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "LinkedService",
+	}:
+		if err := (&controllerssynapse.LinkedServiceReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("LinkedService"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_linked_service"],
+			TypeName: "azurerm_synapse_linked_service",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "LinkedService")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ManagedPrivateEndpoint",
 	}:
 		if err := (&controllerssynapse.ManagedPrivateEndpointReconciler{
@@ -10357,6 +12220,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_synapse_managed_private_endpoint",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ManagedPrivateEndpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PrivateLinkHub",
+	}:
+		if err := (&controllerssynapse.PrivateLinkHubReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("PrivateLinkHub"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_private_link_hub"],
+			TypeName: "azurerm_synapse_private_link_hub",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "PrivateLinkHub")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -10413,6 +12293,108 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "synapse.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "SqlPoolExtendedAuditingPolicy",
+	}:
+		if err := (&controllerssynapse.SqlPoolExtendedAuditingPolicyReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("SqlPoolExtendedAuditingPolicy"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_sql_pool_extended_auditing_policy"],
+			TypeName: "azurerm_synapse_sql_pool_extended_auditing_policy",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SqlPoolExtendedAuditingPolicy")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SqlPoolSecurityAlertPolicy",
+	}:
+		if err := (&controllerssynapse.SqlPoolSecurityAlertPolicyReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("SqlPoolSecurityAlertPolicy"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_sql_pool_security_alert_policy"],
+			TypeName: "azurerm_synapse_sql_pool_security_alert_policy",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SqlPoolSecurityAlertPolicy")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SqlPoolVulnerabilityAssessment",
+	}:
+		if err := (&controllerssynapse.SqlPoolVulnerabilityAssessmentReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("SqlPoolVulnerabilityAssessment"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_sql_pool_vulnerability_assessment"],
+			TypeName: "azurerm_synapse_sql_pool_vulnerability_assessment",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SqlPoolVulnerabilityAssessment")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SqlPoolVulnerabilityAssessmentBaseline",
+	}:
+		if err := (&controllerssynapse.SqlPoolVulnerabilityAssessmentBaselineReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("SqlPoolVulnerabilityAssessmentBaseline"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_sql_pool_vulnerability_assessment_baseline"],
+			TypeName: "azurerm_synapse_sql_pool_vulnerability_assessment_baseline",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SqlPoolVulnerabilityAssessmentBaseline")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SqlPoolWorkloadClassifier",
+	}:
+		if err := (&controllerssynapse.SqlPoolWorkloadClassifierReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("SqlPoolWorkloadClassifier"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_sql_pool_workload_classifier"],
+			TypeName: "azurerm_synapse_sql_pool_workload_classifier",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SqlPoolWorkloadClassifier")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SqlPoolWorkloadGroup",
+	}:
+		if err := (&controllerssynapse.SqlPoolWorkloadGroupReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("SqlPoolWorkloadGroup"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_sql_pool_workload_group"],
+			TypeName: "azurerm_synapse_sql_pool_workload_group",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SqlPoolWorkloadGroup")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Workspace",
 	}:
 		if err := (&controllerssynapse.WorkspaceReconciler{
@@ -10425,6 +12407,108 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_synapse_workspace",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Workspace")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceAadAdmin",
+	}:
+		if err := (&controllerssynapse.WorkspaceAadAdminReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("WorkspaceAadAdmin"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_workspace_aad_admin"],
+			TypeName: "azurerm_synapse_workspace_aad_admin",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "WorkspaceAadAdmin")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceExtendedAuditingPolicy",
+	}:
+		if err := (&controllerssynapse.WorkspaceExtendedAuditingPolicyReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("WorkspaceExtendedAuditingPolicy"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_workspace_extended_auditing_policy"],
+			TypeName: "azurerm_synapse_workspace_extended_auditing_policy",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "WorkspaceExtendedAuditingPolicy")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceKey",
+	}:
+		if err := (&controllerssynapse.WorkspaceKeyReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("WorkspaceKey"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_workspace_key"],
+			TypeName: "azurerm_synapse_workspace_key",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "WorkspaceKey")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceSecurityAlertPolicy",
+	}:
+		if err := (&controllerssynapse.WorkspaceSecurityAlertPolicyReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("WorkspaceSecurityAlertPolicy"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_workspace_security_alert_policy"],
+			TypeName: "azurerm_synapse_workspace_security_alert_policy",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "WorkspaceSecurityAlertPolicy")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceSQLAadAdmin",
+	}:
+		if err := (&controllerssynapse.WorkspaceSQLAadAdminReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("WorkspaceSQLAadAdmin"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_workspace_sql_aad_admin"],
+			TypeName: "azurerm_synapse_workspace_sql_aad_admin",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "WorkspaceSQLAadAdmin")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceVulnerabilityAssessment",
+	}:
+		if err := (&controllerssynapse.WorkspaceVulnerabilityAssessmentReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("WorkspaceVulnerabilityAssessment"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_synapse_workspace_vulnerability_assessment"],
+			TypeName: "azurerm_synapse_workspace_vulnerability_assessment",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "WorkspaceVulnerabilityAssessment")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -10464,6 +12548,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "trafficmanager.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "AzureEndpoint",
+	}:
+		if err := (&controllerstrafficmanager.AzureEndpointReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("AzureEndpoint"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_traffic_manager_azure_endpoint"],
+			TypeName: "azurerm_traffic_manager_azure_endpoint",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AzureEndpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "trafficmanager.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Endpoint",
 	}:
 		if err := (&controllerstrafficmanager.EndpointReconciler{
@@ -10476,6 +12577,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_traffic_manager_endpoint",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Endpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "trafficmanager.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ExternalEndpoint",
+	}:
+		if err := (&controllerstrafficmanager.ExternalEndpointReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ExternalEndpoint"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_traffic_manager_external_endpoint"],
+			TypeName: "azurerm_traffic_manager_external_endpoint",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ExternalEndpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "trafficmanager.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "NestedEndpoint",
+	}:
+		if err := (&controllerstrafficmanager.NestedEndpointReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("NestedEndpoint"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_traffic_manager_nested_endpoint"],
+			TypeName: "azurerm_traffic_manager_nested_endpoint",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "NestedEndpoint")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -10510,6 +12645,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_user_assigned_identity",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "AssignedIdentity")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "video.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Analyzer",
+	}:
+		if err := (&controllersvideo.AnalyzerReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Analyzer"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_video_analyzer"],
+			TypeName: "azurerm_video_analyzer",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Analyzer")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "video.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AnalyzerEdgeModule",
+	}:
+		if err := (&controllersvideo.AnalyzerEdgeModuleReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("AnalyzerEdgeModule"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_video_analyzer_edge_module"],
+			TypeName: "azurerm_video_analyzer_edge_module",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "AnalyzerEdgeModule")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -10561,6 +12730,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_virtual_desktop_host_pool",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "DesktopHostPool")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "virtual.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "DesktopHostPoolRegistrationInfo",
+	}:
+		if err := (&controllersvirtual.DesktopHostPoolRegistrationInfoReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("DesktopHostPoolRegistrationInfo"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_virtual_desktop_host_pool_registration_info"],
+			TypeName: "azurerm_virtual_desktop_host_pool_registration_info",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "DesktopHostPoolRegistrationInfo")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "virtual.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "DesktopScalingPlan",
+	}:
+		if err := (&controllersvirtual.DesktopScalingPlanReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("DesktopScalingPlan"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_virtual_desktop_scaling_plan"],
+			TypeName: "azurerm_virtual_desktop_scaling_plan",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "DesktopScalingPlan")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -10680,6 +12883,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_virtual_hub_route_table",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "HubRouteTable")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "virtual.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "HubRouteTableRoute",
+	}:
+		if err := (&controllersvirtual.HubRouteTableRouteReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("HubRouteTableRoute"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_virtual_hub_route_table_route"],
+			TypeName: "azurerm_virtual_hub_route_table_route",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "HubRouteTableRoute")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -10816,6 +13036,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "azurerm_virtual_network",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Network")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "virtual.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "NetworkDNSServers",
+	}:
+		if err := (&controllersvirtual.NetworkDNSServersReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("NetworkDNSServers"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_virtual_network_dns_servers"],
+			TypeName: "azurerm_virtual_network_dns_servers",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "NetworkDNSServers")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -10974,6 +13211,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 	case schema.GroupVersionKind{
 		Group:   "vpn.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "GatewayNATRule",
+	}:
+		if err := (&controllersvpn.GatewayNATRuleReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("GatewayNATRule"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_vpn_gateway_nat_rule"],
+			TypeName: "azurerm_vpn_gateway_nat_rule",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "GatewayNATRule")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "vpn.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ServerConfiguration",
 	}:
 		if err := (&controllersvpn.ServerConfigurationReconciler{
@@ -11023,6 +13277,57 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "web.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Pubsub",
+	}:
+		if err := (&controllersweb.PubsubReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Pubsub"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_web_pubsub"],
+			TypeName: "azurerm_web_pubsub",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Pubsub")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "web.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PubsubHub",
+	}:
+		if err := (&controllersweb.PubsubHubReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("PubsubHub"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_web_pubsub_hub"],
+			TypeName: "azurerm_web_pubsub_hub",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "PubsubHub")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "web.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PubsubNetworkACL",
+	}:
+		if err := (&controllersweb.PubsubNetworkACLReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("PubsubNetworkACL"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["azurerm_web_pubsub_network_acl"],
+			TypeName: "azurerm_web_pubsub_network_acl",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "PubsubNetworkACL")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "windows.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "VirtualMachine",
@@ -11066,6 +13371,33 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 
 func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	switch gvk {
+	case schema.GroupVersionKind{
+		Group:   "aadb2c.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Directory",
+	}:
+		if err := (&aadb2cv1alpha1.Directory{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Directory")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "active.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "DirectoryDomainService",
+	}:
+		if err := (&activev1alpha1.DirectoryDomainService{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "DirectoryDomainService")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "active.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "DirectoryDomainServiceReplicaSet",
+	}:
+		if err := (&activev1alpha1.DirectoryDomainServiceReplicaSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "DirectoryDomainServiceReplicaSet")
+			return err
+		}
 	case schema.GroupVersionKind{
 		Group:   "advanced.azurerm.kubeform.com",
 		Version: "v1alpha1",
@@ -11150,10 +13482,28 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "apimanagement.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ApiRelease",
+	}:
+		if err := (&apimanagementv1alpha1.ApiRelease{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ApiRelease")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ApiSchema",
 	}:
 		if err := (&apimanagementv1alpha1.ApiSchema{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ApiSchema")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ApiTag",
+	}:
+		if err := (&apimanagementv1alpha1.ApiTag{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ApiTag")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -11217,6 +13567,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&apimanagementv1alpha1.EmailTemplate{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmailTemplate")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Gateway",
+	}:
+		if err := (&apimanagementv1alpha1.Gateway{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Gateway")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "GatewayAPI",
+	}:
+		if err := (&apimanagementv1alpha1.GatewayAPI{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "GatewayAPI")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -11312,6 +13680,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "apimanagement.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "NotificationRecipientEmail",
+	}:
+		if err := (&apimanagementv1alpha1.NotificationRecipientEmail{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NotificationRecipientEmail")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "NotificationRecipientUser",
+	}:
+		if err := (&apimanagementv1alpha1.NotificationRecipientUser{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NotificationRecipientUser")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "OpenidConnectProvider",
 	}:
 		if err := (&apimanagementv1alpha1.OpenidConnectProvider{}).SetupWebhookWithManager(mgr); err != nil {
@@ -11393,6 +13779,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "apimanagement.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "Tag",
+	}:
+		if err := (&apimanagementv1alpha1.Tag{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Tag")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "apimanagement.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "User",
 	}:
 		if err := (&apimanagementv1alpha1.User{}).SetupWebhookWithManager(mgr); err != nil {
@@ -11406,6 +13801,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&appv1alpha1.Configuration{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Configuration")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "app.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ConfigurationFeature",
+	}:
+		if err := (&appv1alpha1.ConfigurationFeature{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ConfigurationFeature")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "app.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ConfigurationKey",
+	}:
+		if err := (&appv1alpha1.ConfigurationKey{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ConfigurationKey")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -11510,10 +13923,28 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "app.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ServicePublicCertificate",
+	}:
+		if err := (&appv1alpha1.ServicePublicCertificate{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ServicePublicCertificate")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "app.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ServiceSlot",
 	}:
 		if err := (&appv1alpha1.ServiceSlot{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceSlot")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "app.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ServiceSlotCustomHostnameBinding",
+	}:
+		if err := (&appv1alpha1.ServiceSlotCustomHostnameBinding{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceSlotCustomHostnameBinding")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -11769,6 +14200,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "automation.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Webhook",
+	}:
+		if err := (&automationv1alpha1.Webhook{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Webhook")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "availability.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Set",
@@ -11861,6 +14301,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "batch.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "Job",
+	}:
+		if err := (&batchv1alpha1.Job{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Job")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "batch.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Pool",
 	}:
 		if err := (&batchv1alpha1.Pool{}).SetupWebhookWithManager(mgr); err != nil {
@@ -11874,6 +14323,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&blueprintv1alpha1.Assignment{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Assignment")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ChannelAlexa",
+	}:
+		if err := (&botv1alpha1.ChannelAlexa{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ChannelAlexa")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ChannelDirectLineSpeech",
+	}:
+		if err := (&botv1alpha1.ChannelDirectLineSpeech{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ChannelDirectLineSpeech")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -11897,6 +14364,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "bot.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ChannelFacebook",
+	}:
+		if err := (&botv1alpha1.ChannelFacebook{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ChannelFacebook")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ChannelLine",
+	}:
+		if err := (&botv1alpha1.ChannelLine{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ChannelLine")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ChannelMsTeams",
 	}:
 		if err := (&botv1alpha1.ChannelMsTeams{}).SetupWebhookWithManager(mgr); err != nil {
@@ -11910,6 +14395,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&botv1alpha1.ChannelSlack{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ChannelSlack")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ChannelSms",
+	}:
+		if err := (&botv1alpha1.ChannelSms{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ChannelSms")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ChannelWebChat",
+	}:
+		if err := (&botv1alpha1.ChannelWebChat{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ChannelWebChat")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -11933,6 +14436,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "bot.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ServiceAzureBot",
+	}:
+		if err := (&botv1alpha1.ServiceAzureBot{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceAzureBot")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "bot.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "WebApp",
 	}:
 		if err := (&botv1alpha1.WebApp{}).SetupWebhookWithManager(mgr); err != nil {
@@ -11946,6 +14458,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&cdnv1alpha1.Endpoint{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Endpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "cdn.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "EndpointCustomDomain",
+	}:
+		if err := (&cdnv1alpha1.EndpointCustomDomain{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "EndpointCustomDomain")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -11967,12 +14488,30 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "cognitive.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AccountCustomerManagedKey",
+	}:
+		if err := (&cognitivev1alpha1.AccountCustomerManagedKey{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AccountCustomerManagedKey")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "communication.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Service",
 	}:
 		if err := (&communicationv1alpha1.Service{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Service")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "consumption.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "BudgetManagementGroup",
+	}:
+		if err := (&consumptionv1alpha1.BudgetManagementGroup{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "BudgetManagementGroup")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -12023,6 +14562,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "container.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "RegistryTask",
+	}:
+		if err := (&containerv1alpha1.RegistryTask{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "RegistryTask")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "container.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "RegistryToken",
 	}:
 		if err := (&containerv1alpha1.RegistryToken{}).SetupWebhookWithManager(mgr); err != nil {
@@ -12045,6 +14593,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&cosmosdbv1alpha1.Account{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Account")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "cosmosdb.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "CassandraCluster",
+	}:
+		if err := (&cosmosdbv1alpha1.CassandraCluster{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "CassandraCluster")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "cosmosdb.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "CassandraDatacenter",
+	}:
+		if err := (&cosmosdbv1alpha1.CassandraDatacenter{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "CassandraDatacenter")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -12203,10 +14769,37 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "data.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FactoryCustomDataset",
+	}:
+		if err := (&datav1alpha1.FactoryCustomDataset{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryCustomDataset")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FactoryDataFlow",
+	}:
+		if err := (&datav1alpha1.FactoryDataFlow{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryDataFlow")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "FactoryDatasetAzureBlob",
 	}:
 		if err := (&datav1alpha1.FactoryDatasetAzureBlob{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryDatasetAzureBlob")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FactoryDatasetBinary",
+	}:
+		if err := (&datav1alpha1.FactoryDatasetBinary{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryDatasetBinary")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -12410,6 +15003,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "data.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FactoryLinkedServiceCosmosdbMongoapi",
+	}:
+		if err := (&datav1alpha1.FactoryLinkedServiceCosmosdbMongoapi{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryLinkedServiceCosmosdbMongoapi")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "FactoryLinkedServiceDataLakeStorageGen2",
 	}:
 		if err := (&datav1alpha1.FactoryLinkedServiceDataLakeStorageGen2{}).SetupWebhookWithManager(mgr); err != nil {
@@ -12450,6 +15052,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&datav1alpha1.FactoryLinkedServiceOdata{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryLinkedServiceOdata")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FactoryLinkedServiceOdbc",
+	}:
+		if err := (&datav1alpha1.FactoryLinkedServiceOdbc{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryLinkedServiceOdbc")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -12509,6 +15120,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "data.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FactoryManagedPrivateEndpoint",
+	}:
+		if err := (&datav1alpha1.FactoryManagedPrivateEndpoint{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryManagedPrivateEndpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "FactoryPipeline",
 	}:
 		if err := (&datav1alpha1.FactoryPipeline{}).SetupWebhookWithManager(mgr); err != nil {
@@ -12527,10 +15147,28 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "data.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FactoryTriggerCustomEvent",
+	}:
+		if err := (&datav1alpha1.FactoryTriggerCustomEvent{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryTriggerCustomEvent")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "FactoryTriggerSchedule",
 	}:
 		if err := (&datav1alpha1.FactoryTriggerSchedule{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryTriggerSchedule")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FactoryTriggerTumblingWindow",
+	}:
+		if err := (&datav1alpha1.FactoryTriggerTumblingWindow{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FactoryTriggerTumblingWindow")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -12590,10 +15228,46 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "data.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ProtectionBackupInstanceBlobStorage",
+	}:
+		if err := (&datav1alpha1.ProtectionBackupInstanceBlobStorage{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ProtectionBackupInstanceBlobStorage")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ProtectionBackupInstanceDisk",
+	}:
+		if err := (&datav1alpha1.ProtectionBackupInstanceDisk{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ProtectionBackupInstanceDisk")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ProtectionBackupInstancePostgresql",
 	}:
 		if err := (&datav1alpha1.ProtectionBackupInstancePostgresql{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ProtectionBackupInstancePostgresql")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ProtectionBackupPolicyBlobStorage",
+	}:
+		if err := (&datav1alpha1.ProtectionBackupPolicyBlobStorage{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ProtectionBackupPolicyBlobStorage")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "data.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ProtectionBackupPolicyDisk",
+	}:
+		if err := (&datav1alpha1.ProtectionBackupPolicyDisk{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ProtectionBackupPolicyDisk")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -12720,6 +15394,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&databricksv1alpha1.Workspace{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Workspace")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "databricks.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceCustomerManagedKey",
+	}:
+		if err := (&databricksv1alpha1.WorkspaceCustomerManagedKey{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "WorkspaceCustomerManagedKey")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -12873,6 +15556,42 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&diskv1alpha1.EncryptionSet{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EncryptionSet")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "disk.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Pool",
+	}:
+		if err := (&diskv1alpha1.Pool{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Pool")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "disk.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PoolIscsiTarget",
+	}:
+		if err := (&diskv1alpha1.PoolIscsiTarget{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PoolIscsiTarget")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "disk.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PoolIscsiTargetLun",
+	}:
+		if err := (&diskv1alpha1.PoolIscsiTargetLun{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PoolIscsiTargetLun")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "disk.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PoolManagedDiskAttachment",
+	}:
+		if err := (&diskv1alpha1.PoolManagedDiskAttachment{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PoolManagedDiskAttachment")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -13236,6 +15955,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "frontdoor.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "RulesEngine",
+	}:
+		if err := (&frontdoorv1alpha1.RulesEngine{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "RulesEngine")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "function.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "App",
@@ -13436,6 +16164,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "iottime.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "SeriesInsightsEventSourceEventhub",
+	}:
+		if err := (&iottimev1alpha1.SeriesInsightsEventSourceEventhub{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "SeriesInsightsEventSourceEventhub")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "iottime.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "SeriesInsightsEventSourceIothub",
 	}:
 		if err := (&iottimev1alpha1.SeriesInsightsEventSourceIothub{}).SetupWebhookWithManager(mgr); err != nil {
@@ -13485,6 +16222,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&iothubv1alpha1.Iothub{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Iothub")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "iothub.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Certificate",
+	}:
+		if err := (&iothubv1alpha1.Certificate{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Certificate")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -13661,6 +16407,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "keyvault.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ManagedStorageAccount",
+	}:
+		if err := (&keyvaultv1alpha1.ManagedStorageAccount{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedStorageAccount")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "keyvault.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedStorageAccountSasTokenDefinition",
+	}:
+		if err := (&keyvaultv1alpha1.ManagedStorageAccountSasTokenDefinition{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedStorageAccountSasTokenDefinition")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "keyvault.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Secret",
 	}:
 		if err := (&keyvaultv1alpha1.Secret{}).SetupWebhookWithManager(mgr); err != nil {
@@ -13776,6 +16540,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "kusto.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Script",
+	}:
+		if err := (&kustov1alpha1.Script{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Script")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "lb.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Lb",
@@ -13881,6 +16654,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&linuxv1alpha1.VirtualMachineScaleSet{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "VirtualMachineScaleSet")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "load.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Loadtest",
+	}:
+		if err := (&loadv1alpha1.Loadtest{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Loadtest")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -14021,6 +16803,87 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "logicapp.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "IntegrationAccountAgreement",
+	}:
+		if err := (&logicappv1alpha1.IntegrationAccountAgreement{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "IntegrationAccountAgreement")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountAssembly",
+	}:
+		if err := (&logicappv1alpha1.IntegrationAccountAssembly{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "IntegrationAccountAssembly")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountBatchConfiguration",
+	}:
+		if err := (&logicappv1alpha1.IntegrationAccountBatchConfiguration{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "IntegrationAccountBatchConfiguration")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountCertificate",
+	}:
+		if err := (&logicappv1alpha1.IntegrationAccountCertificate{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "IntegrationAccountCertificate")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountMap",
+	}:
+		if err := (&logicappv1alpha1.IntegrationAccountMap{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "IntegrationAccountMap")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountPartner",
+	}:
+		if err := (&logicappv1alpha1.IntegrationAccountPartner{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "IntegrationAccountPartner")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountSchema",
+	}:
+		if err := (&logicappv1alpha1.IntegrationAccountSchema{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "IntegrationAccountSchema")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationAccountSession",
+	}:
+		if err := (&logicappv1alpha1.IntegrationAccountSession{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "IntegrationAccountSession")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Standard",
+	}:
+		if err := (&logicappv1alpha1.Standard{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Standard")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logicapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "TriggerCustom",
 	}:
 		if err := (&logicappv1alpha1.TriggerCustom{}).SetupWebhookWithManager(mgr); err != nil {
@@ -14055,6 +16918,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "logz.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Monitor",
+	}:
+		if err := (&logzv1alpha1.Monitor{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Monitor")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "logz.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "TagRule",
+	}:
+		if err := (&logzv1alpha1.TagRule{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "TagRule")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "machine.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "LearningComputeCluster",
@@ -14066,10 +16947,28 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "machine.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "LearningComputeInstance",
+	}:
+		if err := (&machinev1alpha1.LearningComputeInstance{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LearningComputeInstance")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "machine.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "LearningInferenceCluster",
 	}:
 		if err := (&machinev1alpha1.LearningInferenceCluster{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LearningInferenceCluster")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "machine.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "LearningSynapseSpark",
+	}:
+		if err := (&machinev1alpha1.LearningSynapseSpark{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LearningSynapseSpark")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -14097,6 +16996,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&maintenancev1alpha1.AssignmentVirtualMachine{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "AssignmentVirtualMachine")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "maintenance.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AssignmentVirtualMachineScaleSet",
+	}:
+		if err := (&maintenancev1alpha1.AssignmentVirtualMachineScaleSet{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AssignmentVirtualMachineScaleSet")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -14187,6 +17095,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&mapsv1alpha1.Account{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Account")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "maps.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Creator",
+	}:
+		if err := (&mapsv1alpha1.Creator{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Creator")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -14426,6 +17343,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "monitor.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "PrivateLinkScope",
+	}:
+		if err := (&monitorv1alpha1.PrivateLinkScope{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PrivateLinkScope")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "monitor.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PrivateLinkScopedService",
+	}:
+		if err := (&monitorv1alpha1.PrivateLinkScopedService{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PrivateLinkScopedService")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "monitor.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ScheduledQueryRulesAlert",
 	}:
 		if err := (&monitorv1alpha1.ScheduledQueryRulesAlert{}).SetupWebhookWithManager(mgr); err != nil {
@@ -14489,6 +17424,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "mssql.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FailoverGroup",
+	}:
+		if err := (&mssqlv1alpha1.FailoverGroup{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FailoverGroup")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "FirewallRule",
 	}:
 		if err := (&mssqlv1alpha1.FirewallRule{}).SetupWebhookWithManager(mgr); err != nil {
@@ -14511,6 +17455,51 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&mssqlv1alpha1.JobCredential{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "JobCredential")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedDatabase",
+	}:
+		if err := (&mssqlv1alpha1.ManagedDatabase{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedDatabase")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstance",
+	}:
+		if err := (&mssqlv1alpha1.ManagedInstance{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedInstance")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstanceActiveDirectoryAdministrator",
+	}:
+		if err := (&mssqlv1alpha1.ManagedInstanceActiveDirectoryAdministrator{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedInstanceActiveDirectoryAdministrator")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstanceFailoverGroup",
+	}:
+		if err := (&mssqlv1alpha1.ManagedInstanceFailoverGroup{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedInstanceFailoverGroup")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mssql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "OutboundFirewallRule",
+	}:
+		if err := (&mssqlv1alpha1.OutboundFirewallRule{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "OutboundFirewallRule")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -14615,6 +17604,42 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "mysql.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "FlexibleDatabase",
+	}:
+		if err := (&mysqlv1alpha1.FlexibleDatabase{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FlexibleDatabase")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mysql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FlexibleServer",
+	}:
+		if err := (&mysqlv1alpha1.FlexibleServer{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FlexibleServer")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mysql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FlexibleServerConfiguration",
+	}:
+		if err := (&mysqlv1alpha1.FlexibleServerConfiguration{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FlexibleServerConfiguration")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mysql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FlexibleServerFirewallRule",
+	}:
+		if err := (&mysqlv1alpha1.FlexibleServerFirewallRule{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FlexibleServerFirewallRule")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "mysql.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Server",
 	}:
 		if err := (&mysqlv1alpha1.Server{}).SetupWebhookWithManager(mgr); err != nil {
@@ -14691,6 +17716,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&netappv1alpha1.Snapshot{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Snapshot")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "netapp.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SnapshotPolicy",
+	}:
+		if err := (&netappv1alpha1.SnapshotPolicy{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "SnapshotPolicy")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -14919,6 +17953,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "policy.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "VirtualMachineConfigurationAssignment",
+	}:
+		if err := (&policyv1alpha1.VirtualMachineConfigurationAssignment{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "VirtualMachineConfigurationAssignment")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "portal.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "TenantConfiguration",
@@ -14970,6 +18013,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&postgresqlv1alpha1.FlexibleServer{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "FlexibleServer")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "postgresql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FlexibleServerConfiguration",
+	}:
+		if err := (&postgresqlv1alpha1.FlexibleServerConfiguration{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FlexibleServerConfiguration")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "postgresql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FlexibleServerDatabase",
+	}:
+		if err := (&postgresqlv1alpha1.FlexibleServerDatabase{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FlexibleServerDatabase")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -15218,10 +18279,28 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "relay.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "HybridConnectionAuthorizationRule",
+	}:
+		if err := (&relayv1alpha1.HybridConnectionAuthorizationRule{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "HybridConnectionAuthorizationRule")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "relay.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Namespace",
 	}:
 		if err := (&relayv1alpha1.Namespace{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Namespace")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "relay.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "NamespaceAuthorizationRule",
+	}:
+		if err := (&relayv1alpha1.NamespaceAuthorizationRule{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NamespaceAuthorizationRule")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -15231,6 +18310,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&resourcev1alpha1.Group{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Group")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "resource.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "GroupCostManagementExport",
+	}:
+		if err := (&resourcev1alpha1.GroupCostManagementExport{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "GroupCostManagementExport")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -15452,6 +18540,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "sentinel.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "AutomationRule",
+	}:
+		if err := (&sentinelv1alpha1.AutomationRule{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AutomationRule")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sentinel.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "DataConnectorAwsCloudTrail",
 	}:
 		if err := (&sentinelv1alpha1.DataConnectorAwsCloudTrail{}).SetupWebhookWithManager(mgr); err != nil {
@@ -15522,12 +18619,39 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "sentinel.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Watchlist",
+	}:
+		if err := (&sentinelv1alpha1.Watchlist{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Watchlist")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sentinel.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WatchlistItem",
+	}:
+		if err := (&sentinelv1alpha1.WatchlistItem{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "WatchlistItem")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "service.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "FabricCluster",
 	}:
 		if err := (&servicev1alpha1.FabricCluster{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "FabricCluster")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "service.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "FabricManagedCluster",
+	}:
+		if err := (&servicev1alpha1.FabricManagedCluster{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "FabricManagedCluster")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -15693,6 +18817,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "signalr.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ServiceNetworkACL",
+	}:
+		if err := (&signalrv1alpha1.ServiceNetworkACL{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceNetworkACL")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "siterecovery.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Fabric",
@@ -15846,6 +18979,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "spring.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "CloudStorage",
+	}:
+		if err := (&springv1alpha1.CloudStorage{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "CloudStorage")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "sql.azurerm.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "ActiveDirectoryAdministrator",
@@ -15893,6 +19035,42 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "sql.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "ManagedDatabase",
+	}:
+		if err := (&sqlv1alpha1.ManagedDatabase{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedDatabase")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstance",
+	}:
+		if err := (&sqlv1alpha1.ManagedInstance{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedInstance")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstanceActiveDirectoryAdministrator",
+	}:
+		if err := (&sqlv1alpha1.ManagedInstanceActiveDirectoryAdministrator{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedInstanceActiveDirectoryAdministrator")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sql.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ManagedInstanceFailoverGroup",
+	}:
+		if err := (&sqlv1alpha1.ManagedInstanceFailoverGroup{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedInstanceFailoverGroup")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "sql.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Server",
 	}:
 		if err := (&sqlv1alpha1.Server{}).SetupWebhookWithManager(mgr); err != nil {
@@ -15933,6 +19111,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&staticv1alpha1.Site{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Site")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "static.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SiteCustomDomain",
+	}:
+		if err := (&staticv1alpha1.SiteCustomDomain{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "SiteCustomDomain")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16005,6 +19192,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&storagev1alpha1.DataLakeGen2Path{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "DataLakeGen2Path")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "storage.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "DisksPool",
+	}:
+		if err := (&storagev1alpha1.DisksPool{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "DisksPool")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16118,6 +19314,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "stream.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "AnalyticsCluster",
+	}:
+		if err := (&streamv1alpha1.AnalyticsCluster{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AnalyticsCluster")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "AnalyticsFunctionJavascriptUdf",
 	}:
 		if err := (&streamv1alpha1.AnalyticsFunctionJavascriptUdf{}).SetupWebhookWithManager(mgr); err != nil {
@@ -16136,6 +19341,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "stream.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "AnalyticsManagedPrivateEndpoint",
+	}:
+		if err := (&streamv1alpha1.AnalyticsManagedPrivateEndpoint{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AnalyticsManagedPrivateEndpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "AnalyticsOutputBlob",
 	}:
 		if err := (&streamv1alpha1.AnalyticsOutputBlob{}).SetupWebhookWithManager(mgr); err != nil {
@@ -16149,6 +19363,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&streamv1alpha1.AnalyticsOutputEventhub{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "AnalyticsOutputEventhub")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AnalyticsOutputFunction",
+	}:
+		if err := (&streamv1alpha1.AnalyticsOutputFunction{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AnalyticsOutputFunction")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16181,10 +19404,37 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "stream.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "AnalyticsOutputSynapse",
+	}:
+		if err := (&streamv1alpha1.AnalyticsOutputSynapse{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AnalyticsOutputSynapse")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AnalyticsOutputTable",
+	}:
+		if err := (&streamv1alpha1.AnalyticsOutputTable{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AnalyticsOutputTable")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "AnalyticsReferenceInputBlob",
 	}:
 		if err := (&streamv1alpha1.AnalyticsReferenceInputBlob{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "AnalyticsReferenceInputBlob")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "stream.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AnalyticsReferenceInputMssql",
+	}:
+		if err := (&streamv1alpha1.AnalyticsReferenceInputMssql{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AnalyticsReferenceInputMssql")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16271,6 +19521,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "subscription.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "CostManagementExport",
+	}:
+		if err := (&subscriptionv1alpha1.CostManagementExport{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "CostManagementExport")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "subscription.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "PolicyAssignment",
 	}:
 		if err := (&subscriptionv1alpha1.PolicyAssignment{}).SetupWebhookWithManager(mgr); err != nil {
@@ -16298,10 +19557,46 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "synapse.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "IntegrationRuntimeAzure",
+	}:
+		if err := (&synapsev1alpha1.IntegrationRuntimeAzure{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "IntegrationRuntimeAzure")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "IntegrationRuntimeSelfHosted",
+	}:
+		if err := (&synapsev1alpha1.IntegrationRuntimeSelfHosted{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "IntegrationRuntimeSelfHosted")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "LinkedService",
+	}:
+		if err := (&synapsev1alpha1.LinkedService{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LinkedService")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ManagedPrivateEndpoint",
 	}:
 		if err := (&synapsev1alpha1.ManagedPrivateEndpoint{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedPrivateEndpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PrivateLinkHub",
+	}:
+		if err := (&synapsev1alpha1.PrivateLinkHub{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PrivateLinkHub")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16334,10 +19629,118 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "synapse.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "SqlPoolExtendedAuditingPolicy",
+	}:
+		if err := (&synapsev1alpha1.SqlPoolExtendedAuditingPolicy{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "SqlPoolExtendedAuditingPolicy")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SqlPoolSecurityAlertPolicy",
+	}:
+		if err := (&synapsev1alpha1.SqlPoolSecurityAlertPolicy{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "SqlPoolSecurityAlertPolicy")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SqlPoolVulnerabilityAssessment",
+	}:
+		if err := (&synapsev1alpha1.SqlPoolVulnerabilityAssessment{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "SqlPoolVulnerabilityAssessment")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SqlPoolVulnerabilityAssessmentBaseline",
+	}:
+		if err := (&synapsev1alpha1.SqlPoolVulnerabilityAssessmentBaseline{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "SqlPoolVulnerabilityAssessmentBaseline")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SqlPoolWorkloadClassifier",
+	}:
+		if err := (&synapsev1alpha1.SqlPoolWorkloadClassifier{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "SqlPoolWorkloadClassifier")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SqlPoolWorkloadGroup",
+	}:
+		if err := (&synapsev1alpha1.SqlPoolWorkloadGroup{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "SqlPoolWorkloadGroup")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Workspace",
 	}:
 		if err := (&synapsev1alpha1.Workspace{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Workspace")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceAadAdmin",
+	}:
+		if err := (&synapsev1alpha1.WorkspaceAadAdmin{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "WorkspaceAadAdmin")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceExtendedAuditingPolicy",
+	}:
+		if err := (&synapsev1alpha1.WorkspaceExtendedAuditingPolicy{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "WorkspaceExtendedAuditingPolicy")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceKey",
+	}:
+		if err := (&synapsev1alpha1.WorkspaceKey{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "WorkspaceKey")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceSecurityAlertPolicy",
+	}:
+		if err := (&synapsev1alpha1.WorkspaceSecurityAlertPolicy{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "WorkspaceSecurityAlertPolicy")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceSQLAadAdmin",
+	}:
+		if err := (&synapsev1alpha1.WorkspaceSQLAadAdmin{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "WorkspaceSQLAadAdmin")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "synapse.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "WorkspaceVulnerabilityAssessment",
+	}:
+		if err := (&synapsev1alpha1.WorkspaceVulnerabilityAssessment{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "WorkspaceVulnerabilityAssessment")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16361,10 +19764,37 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "trafficmanager.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "AzureEndpoint",
+	}:
+		if err := (&trafficmanagerv1alpha1.AzureEndpoint{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AzureEndpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "trafficmanager.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "Endpoint",
 	}:
 		if err := (&trafficmanagerv1alpha1.Endpoint{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Endpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "trafficmanager.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ExternalEndpoint",
+	}:
+		if err := (&trafficmanagerv1alpha1.ExternalEndpoint{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ExternalEndpoint")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "trafficmanager.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "NestedEndpoint",
+	}:
+		if err := (&trafficmanagerv1alpha1.NestedEndpoint{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NestedEndpoint")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16383,6 +19813,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&userv1alpha1.AssignedIdentity{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "AssignedIdentity")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "video.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Analyzer",
+	}:
+		if err := (&videov1alpha1.Analyzer{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Analyzer")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "video.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "AnalyzerEdgeModule",
+	}:
+		if err := (&videov1alpha1.AnalyzerEdgeModule{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AnalyzerEdgeModule")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16410,6 +19858,24 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&virtualv1alpha1.DesktopHostPool{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "DesktopHostPool")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "virtual.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "DesktopHostPoolRegistrationInfo",
+	}:
+		if err := (&virtualv1alpha1.DesktopHostPoolRegistrationInfo{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "DesktopHostPoolRegistrationInfo")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "virtual.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "DesktopScalingPlan",
+	}:
+		if err := (&virtualv1alpha1.DesktopScalingPlan{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "DesktopScalingPlan")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16473,6 +19939,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&virtualv1alpha1.HubRouteTable{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "HubRouteTable")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "virtual.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "HubRouteTableRoute",
+	}:
+		if err := (&virtualv1alpha1.HubRouteTableRoute{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "HubRouteTableRoute")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16545,6 +20020,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&virtualv1alpha1.Network{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Network")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "virtual.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "NetworkDNSServers",
+	}:
+		if err := (&virtualv1alpha1.NetworkDNSServers{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NetworkDNSServers")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -16631,6 +20115,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	case schema.GroupVersionKind{
 		Group:   "vpn.azurerm.kubeform.com",
 		Version: "v1alpha1",
+		Kind:    "GatewayNATRule",
+	}:
+		if err := (&vpnv1alpha1.GatewayNATRule{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "GatewayNATRule")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "vpn.azurerm.kubeform.com",
+		Version: "v1alpha1",
 		Kind:    "ServerConfiguration",
 	}:
 		if err := (&vpnv1alpha1.ServerConfiguration{}).SetupWebhookWithManager(mgr); err != nil {
@@ -16653,6 +20146,33 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	}:
 		if err := (&webv1alpha1.ApplicationFirewallPolicy{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ApplicationFirewallPolicy")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "web.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Pubsub",
+	}:
+		if err := (&webv1alpha1.Pubsub{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Pubsub")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "web.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PubsubHub",
+	}:
+		if err := (&webv1alpha1.PubsubHub{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PubsubHub")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "web.azurerm.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "PubsubNetworkACL",
+	}:
+		if err := (&webv1alpha1.PubsubNetworkACL{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PubsubNetworkACL")
 			return err
 		}
 	case schema.GroupVersionKind{
