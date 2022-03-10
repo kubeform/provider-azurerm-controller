@@ -9,15 +9,15 @@ require (
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/hcl v1.0.0
-	github.com/hashicorp/terraform-plugin-go v0.3.1
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.7.0
+	github.com/hashicorp/terraform-plugin-go v0.5.0
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.10.1
+	github.com/hashicorp/terraform-provider-azurerm v1.44.1-0.20210702030130-ff3fb4ec388d
 	github.com/imdario/mergo v0.3.12
 	github.com/json-iterator/go v1.1.11
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.1.3
-	github.com/terraform-providers/terraform-provider-azurerm v1.44.1-0.20210702030130-ff3fb4ec388d
 	go.bytebuilders.dev/audit v0.0.11
 	go.bytebuilders.dev/license-verifier v0.9.3
 	go.bytebuilders.dev/license-verifier/kubernetes v0.9.2
@@ -31,7 +31,7 @@ require (
 	kmodules.xyz/client-go v0.0.0-20211028120227-48eb36f92a30
 	kmodules.xyz/constants v0.0.0-20210218100002-2c304bfda278
 	kubeform.dev/apimachinery v0.0.0-20210824104859-ba5604d5a1cc
-	kubeform.dev/provider-azurerm-api v0.4.1-0.20220215035406-5a577cdd1777
+	kubeform.dev/provider-azurerm-api v0.4.1-0.20220309100010-6edda5b3032c
 	kubeform.dev/terraform-backend-sdk v0.0.0-20210922115523-21574335f0db
 	sigs.k8s.io/cli-utils v0.25.0
 	sigs.k8s.io/controller-runtime v0.9.0
@@ -118,3 +118,5 @@ replace k8s.io/kubernetes => github.com/kmodules/kubernetes v1.22.0-alpha.0.0.20
 replace k8s.io/utils => k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 
 replace sigs.k8s.io/application => github.com/kmodules/application v0.8.4-0.20210427030912-90eeee3bc4ad
+
+replace github.com/hashicorp/terraform-provider-azurerm => github.com/kubeform/terraform-provider-azurerm v1.44.1-0.20220307131614-7d3fbd3e8f52
