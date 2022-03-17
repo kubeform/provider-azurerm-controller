@@ -13,7 +13,8 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.10.1
 	github.com/hashicorp/terraform-provider-azurerm v1.44.1-0.20210702030130-ff3fb4ec388d
 	github.com/imdario/mergo v0.3.12
-	github.com/json-iterator/go v1.1.11
+	github.com/json-iterator/go v1.1.12
+	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
 	github.com/pkg/errors v0.9.1
