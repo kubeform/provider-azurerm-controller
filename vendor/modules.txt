@@ -2070,7 +2070,7 @@ kmodules.xyz/resource-metrics/api
 ## explicit
 kubeform.dev/apimachinery/api/v1alpha1
 kubeform.dev/apimachinery/pkg/util
-# kubeform.dev/provider-azurerm-api v0.4.1-0.20220309100010-6edda5b3032c
+# kubeform.dev/provider-azurerm-api v0.4.1-0.20220317051615-1d9dbf2eb4ce
 ## explicit
 kubeform.dev/provider-azurerm-api/api/provider
 kubeform.dev/provider-azurerm-api/apis/aadb2c
