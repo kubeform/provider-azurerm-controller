@@ -31,7 +31,7 @@ require (
 	kmodules.xyz/client-go v0.0.0-20211028120227-48eb36f92a30
 	kmodules.xyz/constants v0.0.0-20210218100002-2c304bfda278
 	kubeform.dev/apimachinery v0.0.0-20210824104859-ba5604d5a1cc
-	kubeform.dev/provider-azurerm-api v0.4.1-0.20220309100010-6edda5b3032c
+	kubeform.dev/provider-azurerm-api v0.5.0
 	kubeform.dev/terraform-backend-sdk v0.0.0-20220310143633-45f07fe731c5
 	sigs.k8s.io/cli-utils v0.25.0
 	sigs.k8s.io/controller-runtime v0.9.0
@@ -166,7 +166,7 @@ require (
 	github.com/posener/complete v1.2.3 // indirect
 	github.com/prometheus/client_golang v1.11.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.18.0 // indirect
+	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/qri-io/jsonpointer v0.1.1 // indirect
 	github.com/rickb777/date v1.12.5-0.20200422084442-6300e543c4d9 // indirect
